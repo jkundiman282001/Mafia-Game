@@ -21,7 +21,8 @@ if(isset($_GET["room_id"])){
     $stmt_room = mysqli_prepare($link, $sql_room);
     mysqli_stmt_bind_param($stmt_room, "i", $room_id);
     mysqli_stmt_execute($stmt_room);
-    $room = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_room));
+    $res_room = mysqli_stmt_get_result($stmt_room);
+    $room = $res_room ? mysqli_fetch_assoc($res_room) : null;
     $phase = $room['phase'] ?? 'night';
     $round = $room['round'] ?? 1;
 
@@ -45,8 +46,10 @@ if(isset($_GET["room_id"])){
                 mysqli_stmt_bind_param($stmt_v, "ii", $room_id, $round);
                 mysqli_stmt_execute($stmt_v);
                 $res_v = mysqli_stmt_get_result($stmt_v);
-                while($row_v = mysqli_fetch_assoc($res_v)){
-                    $votes[$row_v['target_id']] = $row_v['count'];
+                if($res_v){
+                    while($row_v = mysqli_fetch_assoc($res_v)){
+                        $votes[$row_v['target_id']] = $row_v['count'];
+                    }
                 }
 
                 $sql_my = "SELECT target_id FROM votes WHERE room_id = ? AND voter_id = ? AND round = ?";
@@ -54,18 +57,20 @@ if(isset($_GET["room_id"])){
                 mysqli_stmt_bind_param($stmt_my, "iii", $room_id, $user_id, $round);
                 mysqli_stmt_execute($stmt_my);
                 $res_my = mysqli_stmt_get_result($stmt_my);
-                if($row_my = mysqli_fetch_assoc($res_my)){
+                if($res_my && $row_my = mysqli_fetch_assoc($res_my)){
                     $my_vote = $row_my['target_id'];
                 }
             }
 
-            while($row = mysqli_fetch_assoc($result)){
-                $players[] = [
-                    "user_id" => $row["user_id"],
-                    "username" => $row["username"],
-                    "is_alive" => (bool)$row["is_alive"],
-                    "vote_count" => $votes[$row["user_id"]] ?? 0
-                ];
+            if($result){
+                while($row = mysqli_fetch_assoc($result)){
+                    $players[] = [
+                        "user_id" => $row["user_id"],
+                        "username" => $row["username"],
+                        "is_alive" => (bool)$row["is_alive"],
+                        "vote_count" => $votes[$row["user_id"]] ?? 0
+                    ];
+                }
             }
             echo json_encode([
                 "status" => "success", 

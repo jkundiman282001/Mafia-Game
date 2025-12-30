@@ -24,7 +24,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     mysqli_stmt_bind_param($stmt, "ii", $room_id, $user_id);
     mysqli_stmt_execute($stmt);
     $res = mysqli_stmt_get_result($stmt);
-    $player = mysqli_fetch_assoc($res);
+    $player = $res ? mysqli_fetch_assoc($res) : null;
 
     if(!$player || !$player['is_alive']){
         echo json_encode(["status" => "error", "message" => "You cannot perform actions."]);
@@ -38,7 +38,8 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     $stmt_turn = mysqli_prepare($link, $sql_turn);
     mysqli_stmt_bind_param($stmt_turn, "i", $room_id);
     mysqli_stmt_execute($stmt_turn);
-    $room_turn_data = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_turn));
+    $res_turn = mysqli_stmt_get_result($stmt_turn);
+    $room_turn_data = $res_turn ? mysqli_fetch_assoc($res_turn) : null;
 
     if(!$room_turn_data){
         echo json_encode(["status" => "error", "message" => "It is not night phase."]);

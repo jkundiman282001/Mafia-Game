@@ -21,7 +21,8 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     $stmt_host = mysqli_prepare($link, $sql_host);
     mysqli_stmt_bind_param($stmt_host, "i", $room_id);
     mysqli_stmt_execute($stmt_host);
-    $room = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_host));
+    $res_room = mysqli_stmt_get_result($stmt_host);
+    $room = $res_room ? mysqli_fetch_assoc($res_room) : null;
 
     if(!$room || $room['creator_id'] != $user_id){
         echo json_encode(["status" => "error", "message" => "Only the host can process voting."]);
@@ -47,8 +48,10 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     $result_v = mysqli_stmt_get_result($stmt_v);
     
     $top_votes = [];
-    while($row = mysqli_fetch_assoc($result_v)){
-        $top_votes[] = $row;
+    if($result_v){
+        while($row = mysqli_fetch_assoc($result_v)){
+            $top_votes[] = $row;
+        }
     }
 
     $message = "The town has finished discussing. ";
@@ -64,17 +67,21 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
             // Eliminate player
             $sql_elim = "UPDATE room_players SET is_alive = 0 WHERE room_id = ? AND user_id = ?";
             $stmt_e = mysqli_prepare($link, $sql_elim);
-            mysqli_stmt_bind_param($stmt_e, "ii", $room_id, $eliminated_id);
-            mysqli_stmt_execute($stmt_e);
+            if($stmt_e){
+                mysqli_stmt_bind_param($stmt_e, "ii", $room_id, $eliminated_id);
+                mysqli_stmt_execute($stmt_e);
+            }
 
             // Get username
             $sql_user = "SELECT username FROM users WHERE id = ?";
             $stmt_u = mysqli_prepare($link, $sql_user);
-            mysqli_stmt_bind_param($stmt_u, "i", $eliminated_id);
-            mysqli_stmt_execute($stmt_u);
-            $username = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_u))['username'];
-            
-            $message .= "$username has been eliminated by the town.";
+            if($stmt_u){
+                mysqli_stmt_bind_param($stmt_u, "i", $eliminated_id);
+                mysqli_stmt_execute($stmt_u);
+                $res_u = mysqli_stmt_get_result($stmt_u);
+                $username = ($res_u && $row_u = mysqli_fetch_assoc($res_u)) ? $row_u['username'] : "A player";
+                $message .= "$username has been eliminated by the town.";
+            }
         }
     } else {
         $message .= "Nobody voted. Nobody was eliminated.";
@@ -83,22 +90,27 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     // 3. Add system message
     $sql_msg = "INSERT INTO messages (room_id, user_id, message) VALUES (?, NULL, ?)";
     $stmt_m = mysqli_prepare($link, $sql_msg);
-    mysqli_stmt_bind_param($stmt_m, "is", $room_id, $message);
-    mysqli_stmt_execute($stmt_m);
+    if($stmt_m){
+        mysqli_stmt_bind_param($stmt_m, "is", $room_id, $message);
+        mysqli_stmt_execute($stmt_m);
+    }
 
     // 4. Check for Win Conditions
     $sql_win = "SELECT role, COUNT(*) as count FROM room_players WHERE room_id = ? AND is_alive = 1 GROUP BY role";
     $stmt_win = mysqli_prepare($link, $sql_win);
-    mysqli_stmt_bind_param($stmt_win, "i", $room_id);
-    mysqli_stmt_execute($stmt_win);
-    $res_win = mysqli_stmt_get_result($stmt_win);
-    
-    $alive_roles = [];
-    $total_alive = 0;
-    while($row_win = mysqli_fetch_assoc($res_win)){
-        $alive_roles[$row_win['role']] = $row_win['count'];
-        $total_alive += $row_win['count'];
-    }
+    if($stmt_win){
+        mysqli_stmt_bind_param($stmt_win, "i", $room_id);
+        mysqli_stmt_execute($stmt_win);
+        $res_win = mysqli_stmt_get_result($stmt_win);
+        
+        $alive_roles = [];
+        $total_alive = 0;
+        if($res_win){
+            while($row_win = mysqli_fetch_assoc($res_win)){
+                $alive_roles[$row_win['role']] = $row_win['count'];
+                $total_alive += $row_win['count'];
+            }
+        }
 
     $killer_count = $alive_roles['Killer'] ?? 0;
     $town_count = $total_alive - $killer_count;
@@ -160,4 +172,5 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     mysqli_stmt_execute($stmt_ur);
 
     echo json_encode(["status" => "success", "message" => "Voting processed", "news" => $message]);
+}
 }

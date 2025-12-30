@@ -2,6 +2,9 @@
 /* Database credentials. Assuming you are running MySQL
 server with default setting (user 'root' with no password) */
 
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
 // Use Environment Variables (Railway defaults or custom), fallback to local defaults
 $db_server = getenv('MYSQLHOST') ?: getenv('DB_SERVER') ?: 'switchyard.proxy.rlwy.net';
 $db_username = getenv('MYSQLUSER') ?: getenv('DB_USERNAME') ?: 'root';
@@ -18,5 +21,12 @@ if ($db_port) {
 
 // Check connection
 if($link === false){
-    die("ERROR: Could not connect. " . mysqli_connect_error());
+    $error_msg = "ERROR: Could not connect. " . mysqli_connect_error();
+    // Check if this is an API call
+    if (strpos($_SERVER['REQUEST_URI'], '/api/') !== false) {
+        header('Content-Type: application/json');
+        echo json_encode(["status" => "error", "message" => $error_msg]);
+        exit;
+    }
+    die($error_msg);
 }

@@ -22,7 +22,8 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     $stmt = mysqli_prepare($link, $sql);
     mysqli_stmt_bind_param($stmt, "i", $room_id);
     mysqli_stmt_execute($stmt);
-    $room = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+    $res_room = mysqli_stmt_get_result($stmt);
+    $room = $res_room ? mysqli_fetch_assoc($res_room) : null;
 
     if(!$room || $room['phase'] !== 'day'){
         echo json_encode(["status" => "error", "message" => "Voting is only allowed during Day phase."]);
@@ -33,7 +34,8 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     $stmt_voter = mysqli_prepare($link, $sql_voter);
     mysqli_stmt_bind_param($stmt_voter, "ii", $room_id, $voter_id);
     mysqli_stmt_execute($stmt_voter);
-    $voter = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_voter));
+    $res_voter = mysqli_stmt_get_result($stmt_voter);
+    $voter = $res_voter ? mysqli_fetch_assoc($res_voter) : null;
 
     if(!$voter || !$voter['is_alive']){
         echo json_encode(["status" => "error", "message" => "You must be alive to vote."]);

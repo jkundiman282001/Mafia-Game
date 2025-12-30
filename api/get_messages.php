@@ -28,11 +28,13 @@ if(isset($_GET["room_id"])){
             $result = mysqli_stmt_get_result($stmt);
             
             $messages = [];
-            while($row = mysqli_fetch_assoc($result)){
-                if($row['user_id'] === null){
-                    $row['username'] = 'SYSTEM';
+            if($result){
+                while($row = mysqli_fetch_assoc($result)){
+                    if($row['user_id'] === null){
+                        $row['username'] = 'SYSTEM';
+                    }
+                    $messages[] = $row;
                 }
-                $messages[] = $row;
             }
             
             echo json_encode(["status" => "success", "messages" => $messages]);

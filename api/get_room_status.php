@@ -2,7 +2,7 @@
 require_once __DIR__ . "/includes/session.php";
 require_once __DIR__ . "/includes/config.php";
 
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
 header('Content-Type: application/json');
@@ -19,8 +19,8 @@ if(isset($_GET["room_id"])){
     if($stmt = mysqli_prepare($link, $sql)){
         mysqli_stmt_bind_param($stmt, "i", $room_id);
         if(mysqli_stmt_execute($stmt)){
-            $result = mysqli_stmt_get_result($stmt);
-            if($row = mysqli_fetch_assoc($result)){
+            $res_room = mysqli_stmt_get_result($stmt);
+            if($res_room && $row = mysqli_fetch_assoc($res_room)){
                 // Turn skipping logic
                 $current_turn = $row["current_turn"];
                 $phase = $row["phase"];
@@ -68,9 +68,11 @@ if(isset($_GET["room_id"])){
                     if($changed){
                         $sql_update = "UPDATE rooms SET current_turn = ? WHERE id = ?";
                         $stmt_up = mysqli_prepare($link, $sql_update);
-                        mysqli_stmt_bind_param($stmt_up, "si", $current_turn, $room_id);
-                        mysqli_stmt_execute($stmt_up);
-                        mysqli_stmt_close($stmt_up);
+                        if($stmt_up){
+                            mysqli_stmt_bind_param($stmt_up, "si", $current_turn, $room_id);
+                            mysqli_stmt_execute($stmt_up);
+                            mysqli_stmt_close($stmt_up);
+                        }
                     }
                 }
 
@@ -90,9 +92,11 @@ if(isset($_GET["room_id"])){
                 echo json_encode(["status" => "error", "message" => "Room not found"]);
             }
         } else {
-            echo json_encode(["status" => "error", "message" => "Database error"]);
+            echo json_encode(["status" => "error", "message" => "Database execution error"]);
         }
         mysqli_stmt_close($stmt);
+    } else {
+        echo json_encode(["status" => "error", "message" => "Database prepare error"]);
     }
 } else {
     echo json_encode(["status" => "error", "message" => "Missing room_id"]);

@@ -16,13 +16,23 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     $room_id = $_POST['room_id'];
 
     // Fetch current room state
-    $sql = "SELECT phase, killer_target, doctor_target FROM rooms WHERE id = ?";
+    $sql = "SELECT phase, killer_target, doctor_target, current_turn FROM rooms WHERE id = ?";
     $stmt = mysqli_prepare($link, $sql);
     mysqli_stmt_bind_param($stmt, "i", $room_id);
     mysqli_stmt_execute($stmt);
-    $room = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+    $res_room = mysqli_stmt_get_result($stmt);
+    $room = $res_room ? mysqli_fetch_assoc($res_room) : null;
+
+    if(!$room){
+        echo json_encode(["status" => "error", "message" => "Room not found"]);
+        exit;
+    }
 
     if($room['phase'] == 'night'){
+        if($room['current_turn'] !== 'None'){
+            echo json_encode(["status" => "error", "message" => "Night turns are not completed yet."]);
+            exit;
+        }
         // Process night results
         $killed_id = $room['killer_target'];
         $saved_id = $room['doctor_target'];
