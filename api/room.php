@@ -123,12 +123,23 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                     method: 'POST',
                     body: formData
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.status === 'success') {
                         messageInput.value = '';
                         fetchMessages();
+                    } else {
+                        alert('Error: ' + data.message);
                     }
+                })
+                .catch(error => {
+                    console.error('Fetch error:', error);
+                    alert('Failed to send message. See console for details.');
                 });
             });
 

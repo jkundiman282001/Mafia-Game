@@ -1,10 +1,10 @@
 <?php
-require_once "includes/session.php";
-require_once "includes/config.php";
+require_once __DIR__ . "/includes/session.php";
+require_once __DIR__ . "/includes/config.php";
 
 // Check if user is logged in
 if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){
-    echo json_encode(["status" => "error", "message" => "Unauthorized"]);
+    echo json_encode(["status" => "error", "message" => "Unauthorized - Please log in again."]);
     exit;
 }
 
@@ -20,10 +20,14 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
             if(mysqli_stmt_execute($stmt)){
                 echo json_encode(["status" => "success"]);
             } else {
-                echo json_encode(["status" => "error", "message" => "Could not save message"]);
+                echo json_encode(["status" => "error", "message" => "Database error: " . mysqli_error($link)]);
             }
             mysqli_stmt_close($stmt);
+        } else {
+            echo json_encode(["status" => "error", "message" => "Prepare error: " . mysqli_error($link)]);
         }
+    } else {
+        echo json_encode(["status" => "error", "message" => "Message cannot be empty."]);
     }
 }
 ?>
