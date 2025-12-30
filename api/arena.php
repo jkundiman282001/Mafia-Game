@@ -55,7 +55,7 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
         <p style="color: var(--white-dark); text-transform: uppercase; letter-spacing: 2px;">Room: <?php echo htmlspecialchars($room['room_name']); ?></p>
     </div>
 
-    <div class="roles-grid" style="display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 2rem;">
+    <div class="arena-container">
         <!-- Left Column: Player Info -->
         <div class="role-card" style="text-align: left;">
             <h3 style="border-bottom: 1px solid var(--red); padding-bottom: 1rem; margin-bottom: 1rem;">Your Identity</h3>

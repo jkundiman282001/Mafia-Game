@@ -330,6 +330,43 @@ nav {
     z-index: 1;
 }
 
+/* Room & Arena Layout */
+.room-container {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.arena-container {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: 2rem;
+    width: 100%;
+}
+
+.chat-section {
+    flex: 2;
+    min-width: 0;
+}
+
+.sidebar {
+    flex: 1;
+    min-width: 300px;
+}
+
+@media (max-width: 992px) {
+    .room-container, .arena-container {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .sidebar, .arena-container > div {
+        width: 100% !important;
+        min-width: auto;
+    }
+}
+
 .role-icon {
     font-size: 4.5rem;
     margin-bottom: 1.5rem;
@@ -705,7 +742,7 @@ footer {
         width: 100% !important;
     }
 
-    .chat-box {
+    .chat-box, #chat-box {
         height: 400px !important;
     }
 

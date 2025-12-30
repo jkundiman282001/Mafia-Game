@@ -64,9 +64,9 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
         </div>
     </div>
 
-    <div class="roles-grid room-container" style="display: flex; gap: 2rem; align-items: flex-start;">
+    <div class="room-container">
         <!-- Left Side: Chat Room -->
-        <div class="role-card chat-section" style="flex: 2; text-align: left; height: 500px; display: flex; flex-direction: column;">
+        <div class="role-card chat-section" style="height: 500px; display: flex; flex-direction: column; text-align: left;">
             <h3 style="border-bottom: 1px solid var(--red); padding-bottom: 1rem; margin-bottom: 1rem;">Chat Room</h3>
             <div id="chat-box" style="flex-grow: 1; overflow-y: auto; padding: 1rem; background: rgba(0,0,0,0.3); border-radius: 10px; margin-bottom: 1rem;">
                 <p style="color: var(--white-dark); font-style: italic;">Welcome to the room! Loading messages...</p>
