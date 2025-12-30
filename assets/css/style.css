@@ -689,6 +689,29 @@ footer {
     .section-title {
         font-size: 2.5rem;
     }
+
+    /* Room Layout Mobile */
+    .room-container {
+        flex-direction: column !important;
+        gap: 1.5rem !important;
+    }
+
+    .chat-section {
+        order: 2;
+    }
+
+    .sidebar {
+        order: 1;
+        width: 100% !important;
+    }
+
+    .chat-box {
+        height: 400px !important;
+    }
+
+    .role-card {
+        padding: 1.5rem !important;
+    }
 }
 
 @media (max-width: 480px) {
