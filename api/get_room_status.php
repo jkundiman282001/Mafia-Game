@@ -2,7 +2,7 @@
 require_once __DIR__ . "/includes/session.php";
 require_once __DIR__ . "/includes/config.php";
 
-ini_set('display_errors', 0);
+ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 header('Content-Type: application/json');
@@ -34,31 +34,33 @@ if(isset($_GET["room_id"])){
                     $time_remaining = max(0, $duration - $elapsed);
                 }
                 
-                if($phase == 'night' && $current_turn != 'None'){
-                    $turns_sequence = ['Killer', 'Doctor', 'Detective', 'None'];
+                if($phase == 'night' && $current_turn != 'None' && $current_turn != ''){
                     $changed = false;
+                    $next_turns = [
+                        'Killer' => 'Doctor',
+                        'Doctor' => 'Detective',
+                        'Detective' => 'None'
+                    ];
                     
-                    while($current_turn != 'None'){
+                    while($current_turn != 'None' && isset($next_turns[$current_turn])){
                         // Check if any alive player has this role
                         $sql_check = "SELECT id FROM room_players WHERE room_id = ? AND role = ? AND is_alive = 1";
-                        $stmt_check = mysqli_prepare($link, $sql_check);
-                        mysqli_stmt_bind_param($stmt_check, "is", $room_id, $current_turn);
-                        mysqli_stmt_execute($stmt_check);
-                        mysqli_stmt_store_result($stmt_check);
-                        $role_exists = mysqli_stmt_num_rows($stmt_check) > 0;
-                        mysqli_stmt_close($stmt_check);
+                        if($stmt_check = mysqli_prepare($link, $sql_check)){
+                            mysqli_stmt_bind_param($stmt_check, "is", $room_id, $current_turn);
+                            mysqli_stmt_execute($stmt_check);
+                            mysqli_stmt_store_result($stmt_check);
+                            $role_exists = mysqli_stmt_num_rows($stmt_check) > 0;
+                            mysqli_stmt_close($stmt_check);
 
-                        if(!$role_exists){
-                            // Skip turn
-                            $next_turns = [
-                                'Killer' => 'Doctor',
-                                'Doctor' => 'Detective',
-                                'Detective' => 'None'
-                            ];
-                            $current_turn = $next_turns[$current_turn];
-                            $changed = true;
+                            if(!$role_exists){
+                                // Skip turn
+                                $current_turn = $next_turns[$current_turn];
+                                $changed = true;
+                            } else {
+                                // Role is alive, stay on this turn
+                                break;
+                            }
                         } else {
-                            // Role is alive, stay on this turn
                             break;
                         }
                     }
