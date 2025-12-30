@@ -184,9 +184,38 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                 <?php endif; ?>
             </ul>
             
-            <?php if($row['creator_id'] == $_SESSION['id']): ?>
+            <?php 
+            // If game is in progress, show your role
+            if($status == 'in_progress'):
+                $sql_role = "SELECT role FROM room_players WHERE room_id = ? AND user_id = ?";
+                if($stmt_r = mysqli_prepare($link, $sql_role)){
+                    mysqli_stmt_bind_param($stmt_r, "ii", $room_id, $_SESSION['id']);
+                    mysqli_stmt_execute($stmt_r);
+                    $res_r = mysqli_stmt_get_result($stmt_r);
+                    $role_data = mysqli_fetch_assoc($res_r);
+                    $my_role = $role_data ? $role_data['role'] : 'Unknown';
+                    ?>
+                    <div style="margin-top: 2rem; padding: 1rem; background: rgba(255,0,0,0.1); border: 1px solid var(--red); border-radius: 10px; text-align: center;">
+                        <h4 style="color: var(--white-dark); margin-bottom: 0.5rem;">YOUR ROLE</h4>
+                        <div style="font-size: 1.5rem; color: var(--red); font-weight: bold; font-family: 'Orbitron', sans-serif;"><?php echo strtoupper($my_role); ?></div>
+                    </div>
+                    <?php
+                }
+            endif;
+            ?>
+            
+            <?php if($row['creator_id'] == $_SESSION['id'] && $status == 'waiting'): ?>
                 <div style="margin-top: 2rem; text-align: center;">
-                    <button class="cta-button" style="width: 100%; font-size: 1rem;">Start Game</button>
+                    <?php 
+                    $min_players = 4; // Set a minimum number of players to start the game
+                    $can_start = ($current_players >= $min_players);
+                    ?>
+                    <form action="start_game_action.php" method="post">
+                        <input type="hidden" name="room_id" value="<?php echo $room_id; ?>">
+                        <button type="submit" class="cta-button" style="width: 100%; font-size: 1rem; <?php echo !$can_start ? 'opacity: 0.5; cursor: not-allowed;' : ''; ?>" <?php echo !$can_start ? 'disabled' : ''; ?>>
+                            <?php echo $can_start ? 'Start Game' : 'Need ' . ($min_players - $current_players) . ' More Players'; ?>
+                        </button>
+                    </form>
                 </div>
             <?php endif; ?>
             
