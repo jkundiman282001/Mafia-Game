@@ -14,22 +14,17 @@ if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){
 }
 
 if($_SERVER["REQUEST_METHOD"] == "POST"){
-    $room_id = $_POST["room_id"];
-    $user_id = $_SESSION["id"];
+    $room_id = (int)$_POST["room_id"];
+    $user_id = (int)$_SESSION["id"];
     $message = trim($_POST["message"]);
 
     if(!empty($message)){
-        $sql = "INSERT INTO messages (room_id, user_id, message) VALUES (?, ?, ?)";
-        if($stmt = mysqli_prepare($link, $sql)){
-            mysqli_stmt_bind_param($stmt, "iis", $room_id, $user_id, $message);
-            if(mysqli_stmt_execute($stmt)){
-                echo json_encode(["status" => "success"]);
-            } else {
-                echo json_encode(["status" => "error", "message" => "Database error: " . mysqli_error($link)]);
-            }
-            mysqli_stmt_close($stmt);
+        $escaped_message = mysqli_real_escape_string($link, $message);
+        $sql = "INSERT INTO messages (room_id, user_id, message) VALUES ($room_id, $user_id, '$escaped_message')";
+        if(mysqli_query($link, $sql)){
+            echo json_encode(["status" => "success"]);
         } else {
-            echo json_encode(["status" => "error", "message" => "Prepare error: " . mysqli_error($link)]);
+            echo json_encode(["status" => "error", "message" => "Database error: " . mysqli_error($link)]);
         }
     } else {
         echo json_encode(["status" => "error", "message" => "Message cannot be empty."]);

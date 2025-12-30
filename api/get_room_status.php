@@ -1,14 +1,21 @@
 <?php
-require_once __DIR__ . "/includes/session.php";
-require_once __DIR__ . "/includes/config.php";
-
-ini_set('display_errors', 0);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
+
+require_once __DIR__ . "/includes/config.php";
+// Skip session for a moment to debug 500 error
+session_start(); 
 
 header('Content-Type: application/json');
 
+if (!$link) {
+    echo json_encode(["status" => "error", "message" => "Database connection failed in get_room_status.php"]);
+    exit;
+}
+
 if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){
-    echo json_encode(["status" => "error", "message" => "Unauthorized"]);
+    echo json_encode(["status" => "error", "message" => "Unauthorized", "session" => $_SESSION]);
     exit;
 }
 

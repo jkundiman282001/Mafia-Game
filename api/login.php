@@ -26,44 +26,39 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     }
     
     if(empty($username_err) && empty($password_err)){
-        $sql = "SELECT id, username, password FROM users WHERE username = ?";
+        $escaped_username = mysqli_real_escape_string($link, $username);
+        $sql = "SELECT id, username, password FROM users WHERE username = '$escaped_username'";
         
-        if($stmt = mysqli_prepare($link, $sql)){
-            mysqli_stmt_bind_param($stmt, "s", $param_username);
-            $param_username = $username;
-            
-            if(mysqli_stmt_execute($stmt)){
-                mysqli_stmt_store_result($stmt);
+        $result = mysqli_query($link, $sql);
+        if($result){
+            if(mysqli_num_rows($result) == 1){
+                $row = mysqli_fetch_assoc($result);
+                $id = $row['id'];
+                $username = $row['username'];
+                $hashed_password = $row['password'];
                 
-                if(mysqli_stmt_num_rows($stmt) == 1){
-                    mysqli_stmt_bind_result($stmt, $id, $username, $hashed_password);
-                    if(mysqli_stmt_fetch($stmt)){
-                        if(password_verify($password, $hashed_password)){
-                            // Password is correct, so start a new session
-                            if(session_status() === PHP_SESSION_NONE){
-                                session_start();
-                            }
-                            
-                            // Store data in session variables
-                            $_SESSION["loggedin"] = true;
-                            $_SESSION["id"] = $id;
-                            $_SESSION["username"] = $username;                            
-                            
-                            // Save session and redirect user to welcome page
-                            session_write_close();
-                            echo "<script>window.location.href='index.php';</script>";
-                        } else{
-                            $password_err = "The password you entered was not valid.";
-                        }
+                if(password_verify($password, $hashed_password)){
+                    // Password is correct, so start a new session
+                    if(session_status() === PHP_SESSION_NONE){
+                        session_start();
                     }
+                    
+                    // Store data in session variables
+                    $_SESSION["loggedin"] = true;
+                    $_SESSION["id"] = $id;
+                    $_SESSION["username"] = $username;                            
+                    
+                    // Save session and redirect user to welcome page
+                    session_write_close();
+                    echo "<script>window.location.href='index.php';</script>";
                 } else{
-                    $username_err = "No account found with that username.";
+                    $password_err = "The password you entered was not valid.";
                 }
             } else{
-                echo "Oops! Something went wrong. Please try again later.";
+                $username_err = "No account found with that username.";
             }
-
-            mysqli_stmt_close($stmt);
+        } else{
+            echo "Oops! Something went wrong. Please try again later. " . mysqli_error($link);
         }
     }
 }

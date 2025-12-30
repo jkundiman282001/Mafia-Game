@@ -13,25 +13,19 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     } elseif(!preg_match('/^[a-zA-Z0-9_]+$/', trim($_POST["username"]))){
         $username_err = "Username can only contain letters, numbers, and underscores.";
     } else{
-        $sql = "SELECT id FROM users WHERE username = ?";
+        $input_username = trim($_POST["username"]);
+        $escaped_username = mysqli_real_escape_string($link, $input_username);
+        $sql = "SELECT id FROM users WHERE username = '$escaped_username'";
         
-        if($stmt = mysqli_prepare($link, $sql)){
-            mysqli_stmt_bind_param($stmt, "s", $param_username);
-            $param_username = trim($_POST["username"]);
-            
-            if(mysqli_stmt_execute($stmt)){
-                mysqli_stmt_store_result($stmt);
-                
-                if(mysqli_stmt_num_rows($stmt) == 1){
-                    $username_err = "This username is already taken.";
-                } else{
-                    $username = trim($_POST["username"]);
-                }
+        $result = mysqli_query($link, $sql);
+        if($result){
+            if(mysqli_num_rows($result) == 1){
+                $username_err = "This username is already taken.";
             } else{
-                echo "Oops! Something went wrong. Please try again later.";
+                $username = $input_username;
             }
-
-            mysqli_stmt_close($stmt);
+        } else{
+            echo "Oops! Something went wrong. Please try again later. " . mysqli_error($link);
         }
     }
     
@@ -57,23 +51,16 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     // Check input errors before inserting in database
     if(empty($username_err) && empty($password_err) && empty($confirm_password_err)){
         
-        $sql = "INSERT INTO users (username, password) VALUES (?, ?)";
+        $escaped_username = mysqli_real_escape_string($link, $username);
+        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+        $sql = "INSERT INTO users (username, password) VALUES ('$escaped_username', '$hashed_password')";
          
-        if($stmt = mysqli_prepare($link, $sql)){
-            mysqli_stmt_bind_param($stmt, "ss", $param_username, $param_password);
-            
-            $param_username = $username;
-            $param_password = password_hash($password, PASSWORD_DEFAULT); // Creates a password hash
-            
-            if(mysqli_stmt_execute($stmt)){
-                // Redirect to login page
-                echo "<script>window.location.href='login.php';</script>";
-                exit;
-            } else{
-                echo "Something went wrong. Please try again later.";
-            }
-
-            mysqli_stmt_close($stmt);
+        if(mysqli_query($link, $sql)){
+            // Redirect to login page
+            echo "<script>window.location.href='login.php';</script>";
+            exit;
+        } else{
+            echo "Something went wrong. Please try again later. " . mysqli_error($link);
         }
     }
 }

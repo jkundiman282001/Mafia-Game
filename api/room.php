@@ -10,35 +10,24 @@ if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){
 
 // Check if room ID is provided
 if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
-    $room_id = trim($_GET["id"]);
+    $room_id = (int)trim($_GET["id"]);
     
-    // Prepare a select statement
-    $sql = "SELECT * FROM rooms WHERE id = ?";
+    // Fetch room details
+    $sql = "SELECT * FROM rooms WHERE id = $room_id";
+    $result = mysqli_query($link, $sql);
     
-    if($stmt = mysqli_prepare($link, $sql)){
-        mysqli_stmt_bind_param($stmt, "i", $param_id);
-        $param_id = $room_id;
-        
-        if(mysqli_stmt_execute($stmt)){
-            $result = mysqli_stmt_get_result($stmt);
-            
-            if(mysqli_num_rows($result) == 1){
-                        $row = mysqli_fetch_array($result, MYSQLI_ASSOC);
-                        $room_name = $row["room_name"];
-                        $room_code = $row["room_code"];
-                        $current_players = $row["current_players"];
-                        $max_players = $row["max_players"];
-                        $status = $row["status"];
-                    } else{
-                // URL doesn't contain valid id. Redirect to game room page
-                echo "<script>window.location.href='game_room.php';</script>";
-                exit;
-            }
-        } else{
-            echo "Oops! Something went wrong. Please try again later.";
-        }
+    if($result && mysqli_num_rows($result) == 1){
+        $row = mysqli_fetch_array($result, MYSQLI_ASSOC);
+        $room_name = $row["room_name"];
+        $room_code = $row["room_code"];
+        $current_players = $row["current_players"];
+        $max_players = $row["max_players"];
+        $status = $row["status"];
+    } else{
+        // URL doesn't contain valid id. Redirect to game room page
+        echo "<script>window.location.href='game_room.php';</script>";
+        exit;
     }
-    mysqli_stmt_close($stmt);
 } else{
     // URL doesn't contain id parameter. Redirect to game room page
     echo "<script>window.location.href='game_room.php';</script>";
@@ -170,12 +159,10 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                                 FROM room_players rp 
                                 JOIN users u ON rp.user_id = u.id 
                                 JOIN rooms r ON rp.room_id = r.id 
-                                WHERE rp.room_id = ?";
-                if($stmt_players = mysqli_prepare($link, $sql_players)){
-                    mysqli_stmt_bind_param($stmt_players, "i", $room_id);
-                    mysqli_stmt_execute($stmt_players);
-                    $result_players = mysqli_stmt_get_result($stmt_players);
-                    
+                                WHERE rp.room_id = $room_id";
+                $result_players = mysqli_query($link, $sql_players);
+                
+                if($result_players){
                     while($player = mysqli_fetch_assoc($result_players)){
                         $is_creator = ($player['id'] == $player['creator_id']);
                         $is_me = ($player['id'] == $_SESSION['id']);
@@ -186,7 +173,6 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                         if($is_creator) echo '<span style="float: right; color: gold;">👑</span>';
                         echo '</li>';
                     }
-                    mysqli_stmt_close($stmt_players);
                 }
                 ?>
                 <?php if($current_players < $max_players): ?>
@@ -199,11 +185,10 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
             <?php 
             // If game is in progress, show your role
             if($status == 'in_progress'):
-                $sql_role = "SELECT role FROM room_players WHERE room_id = ? AND user_id = ?";
-                if($stmt_r = mysqli_prepare($link, $sql_role)){
-                    mysqli_stmt_bind_param($stmt_r, "ii", $room_id, $_SESSION['id']);
-                    mysqli_stmt_execute($stmt_r);
-                    $res_r = mysqli_stmt_get_result($stmt_r);
+                $user_id = (int)$_SESSION['id'];
+                $sql_role = "SELECT role FROM room_players WHERE room_id = $room_id AND user_id = $user_id";
+                $res_r = mysqli_query($link, $sql_role);
+                if($res_r){
                     $role_data = mysqli_fetch_assoc($res_r);
                     $my_role = $role_data ? $role_data['role'] : 'Unknown';
                     ?>

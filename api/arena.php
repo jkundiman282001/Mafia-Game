@@ -13,35 +13,31 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
     $room_id = trim($_GET["id"]);
     
     // Fetch room details
-    $sql = "SELECT * FROM rooms WHERE id = ?";
-    if($stmt = mysqli_prepare($link, $sql)){
-        mysqli_stmt_bind_param($stmt, "i", $room_id);
-        if(mysqli_stmt_execute($stmt)){
-            $result = mysqli_stmt_get_result($stmt);
-            if(mysqli_num_rows($result) == 1){
-                $room = mysqli_fetch_assoc($result);
-                if($room['status'] !== 'in_progress'){
-                    echo "<script>window.location.href='room.php?id=$room_id';</script>";
-                    exit;
-                }
-            } else {
-                echo "<script>window.location.href='game_room.php';</script>";
-                exit;
-            }
+    $room_id = (int)$room_id;
+    $sql = "SELECT * FROM rooms WHERE id = $room_id";
+    $result = mysqli_query($link, $sql);
+    if($result && mysqli_num_rows($result) == 1){
+        $room = mysqli_fetch_assoc($result);
+        if($room['status'] !== 'in_progress'){
+            echo "<script>window.location.href='room.php?id=$room_id';</script>";
+            exit;
         }
-        mysqli_stmt_close($stmt);
+    } else {
+        echo "<script>window.location.href='game_room.php';</script>";
+        exit;
     }
 
     // Fetch user's role and status
-    $sql_player = "SELECT role, is_alive FROM room_players WHERE room_id = ? AND user_id = ?";
-    if($stmt_p = mysqli_prepare($link, $sql_player)){
-        mysqli_stmt_bind_param($stmt_p, "ii", $room_id, $_SESSION['id']);
-        mysqli_stmt_execute($stmt_p);
-        $res_p = mysqli_stmt_get_result($stmt_p);
+    $user_id = (int)$_SESSION['id'];
+    $sql_player = "SELECT role, is_alive FROM room_players WHERE room_id = $room_id AND user_id = $user_id";
+    $res_p = mysqli_query($link, $sql_player);
+    if($res_p){
         $player_data = mysqli_fetch_assoc($res_p);
         $my_role = $player_data ? $player_data['role'] : 'Unknown';
         $is_alive = $player_data ? $player_data['is_alive'] : false;
-        mysqli_stmt_close($stmt_p);
+    } else {
+        $my_role = 'Unknown';
+        $is_alive = false;
     }
 } else {
     echo "<script>window.location.href='game_room.php';</script>";

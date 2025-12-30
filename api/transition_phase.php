@@ -13,15 +13,12 @@ if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){
 }
 
 if($_SERVER["REQUEST_METHOD"] == "POST"){
-    $room_id = $_POST['room_id'];
+    $room_id = (int)$_POST['room_id'];
 
     // Fetch current room state
-    $sql = "SELECT phase, killer_target, doctor_target, current_turn FROM rooms WHERE id = ?";
-    $stmt = mysqli_prepare($link, $sql);
-    mysqli_stmt_bind_param($stmt, "i", $room_id);
-    mysqli_stmt_execute($stmt);
-    $res_room = mysqli_stmt_get_result($stmt);
-    $room = $res_room ? mysqli_fetch_assoc($res_room) : null;
+    $sql = "SELECT phase, killer_target, doctor_target, current_turn FROM rooms WHERE id = $room_id";
+    $res_room = mysqli_query($link, $sql);
+    $room = ($res_room) ? mysqli_fetch_assoc($res_room) : null;
 
     if(!$room){
         echo json_encode(["status" => "error", "message" => "Room not found"]);
@@ -42,18 +39,14 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
 
         if($killed_id && $killed_id != $saved_id){
             // Someone died
-            $update_player = "UPDATE room_players SET is_alive = 0 WHERE room_id = ? AND user_id = ?";
-            $stmt_up = mysqli_prepare($link, $update_player);
-            mysqli_stmt_bind_param($stmt_up, "ii", $room_id, $killed_id);
-            mysqli_stmt_execute($stmt_up);
+            $update_player = "UPDATE room_players SET is_alive = 0 WHERE room_id = $room_id AND user_id = $killed_id";
+            mysqli_query($link, $update_player);
 
             // Get username of the deceased
-            $sql_user = "SELECT username FROM users WHERE id = ?";
-            $stmt_u = mysqli_prepare($link, $sql_user);
-            mysqli_stmt_bind_param($stmt_u, "i", $killed_id);
-            mysqli_stmt_execute($stmt_u);
-            $user_data = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_u));
-            $username = $user_data['username'];
+            $sql_user = "SELECT username FROM users WHERE id = $killed_id";
+            $res_user = mysqli_query($link, $sql_user);
+            $user_data = ($res_user) ? mysqli_fetch_assoc($res_user) : null;
+            $username = $user_data['username'] ?? "Someone";
             
             $message .= "$username was killed during the night.";
             $death_event = true;
@@ -62,23 +55,21 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
         }
 
         // Add to messages table so everyone sees it in chat
-        $sql_msg = "INSERT INTO messages (room_id, user_id, message) VALUES (?, NULL, ?)";
-        $stmt_m = mysqli_prepare($link, $sql_msg);
-        mysqli_stmt_bind_param($stmt_m, "is", $room_id, $message);
-        mysqli_stmt_execute($stmt_m);
+        $safe_message = mysqli_real_escape_string($link, $message);
+        $sql_msg = "INSERT INTO messages (room_id, user_id, message) VALUES ($room_id, NULL, '$safe_message')";
+        mysqli_query($link, $sql_msg);
 
         // Check for Win Conditions after night kills
-        $sql_win = "SELECT role, COUNT(*) as count FROM room_players WHERE room_id = ? AND is_alive = 1 GROUP BY role";
-        $stmt_win = mysqli_prepare($link, $sql_win);
-        mysqli_stmt_bind_param($stmt_win, "i", $room_id);
-        mysqli_stmt_execute($stmt_win);
-        $res_win = mysqli_stmt_get_result($stmt_win);
+        $sql_win = "SELECT role, COUNT(*) as count FROM room_players WHERE room_id = $room_id AND is_alive = 1 GROUP BY role";
+        $res_win = mysqli_query($link, $sql_win);
         
         $alive_roles = [];
         $total_alive = 0;
-        while($row_win = mysqli_fetch_assoc($res_win)){
-            $alive_roles[$row_win['role']] = $row_win['count'];
-            $total_alive += $row_win['count'];
+        if($res_win){
+            while($row_win = mysqli_fetch_assoc($res_win)){
+                $alive_roles[$row_win['role']] = $row_win['count'];
+                $total_alive += $row_win['count'];
+            }
         }
 
         $killer_count = $alive_roles['Killer'] ?? 0;
@@ -86,64 +77,32 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
 
         if($killer_count == 0){
             $final_msg = "VICTORY! All killers have been eliminated. The town is safe.";
-            $update_game = "UPDATE rooms SET status = 'finished' WHERE id = ?";
-            $stmt_g = mysqli_prepare($link, $update_game);
-            mysqli_stmt_bind_param($stmt_g, "i", $room_id);
-            mysqli_stmt_execute($stmt_g);
+            $update_game = "UPDATE rooms SET status = 'finished' WHERE id = $room_id";
+            mysqli_query($link, $update_game);
             echo json_encode(["status" => "success", "message" => "Game Finished", "news" => $final_msg]);
             exit;
         } elseif($killer_count >= $town_count){
             $final_msg = "DEFEAT! The killer has outnumbered the town. Chaos reigns.";
-            $update_game = "UPDATE rooms SET status = 'finished' WHERE id = ?";
-            $stmt_g = mysqli_prepare($link, $update_game);
-            mysqli_stmt_bind_param($stmt_g, "i", $room_id);
-            mysqli_stmt_execute($stmt_g);
+            $update_game = "UPDATE rooms SET status = 'finished' WHERE id = $room_id";
+            mysqli_query($link, $update_game);
             echo json_encode(["status" => "success", "message" => "Game Finished", "news" => $final_msg]);
             exit;
         }
 
-        // Transition to Day
-        $update_room = "UPDATE rooms SET phase = 'day', action_count = 0, current_turn = 'None', killer_target = NULL, doctor_target = NULL, detective_target = NULL, phase_start_time = NOW() WHERE id = ?";
-        $stmt_ur = mysqli_prepare($link, $update_room);
-        mysqli_stmt_bind_param($stmt_ur, "i", $room_id);
-        mysqli_stmt_execute($stmt_ur);
-
-        echo json_encode(["status" => "success", "message" => "Transitioned to Day phase", "news" => $message]);
-    } else {
-        // Day to Night transition (voting would happen here, but for now just skip)
-        $current_turn = 'Killer';
-        while($current_turn != 'None'){
-            $sql_check = "SELECT id FROM room_players WHERE room_id = ? AND role = ? AND is_alive = 1";
-            $stmt_check = mysqli_prepare($link, $sql_check);
-            mysqli_stmt_bind_param($stmt_check, "is", $room_id, $current_turn);
-            mysqli_stmt_execute($stmt_check);
-            mysqli_stmt_store_result($stmt_check);
-            $role_exists = mysqli_stmt_num_rows($stmt_check) > 0;
-            mysqli_stmt_close($stmt_check);
-
-            if(!$role_exists){
-                $next_map = [
-                    'Killer' => 'Doctor',
-                    'Doctor' => 'Detective',
-                    'Detective' => 'None'
-                ];
-                $current_turn = $next_map[$current_turn];
-            } else {
-                break;
-            }
+        // Move to Day phase
+        $update_room = "UPDATE rooms SET phase = 'day', round = round + 1, killer_target = NULL, doctor_target = NULL, detective_target = NULL, current_turn = 'None', action_count = 0, phase_start_time = NOW() WHERE id = $room_id";
+        if(mysqli_query($link, $update_room)){
+            echo json_encode(["status" => "success", "message" => "Transitioned to Day", "news" => $message]);
+        } else {
+            echo json_encode(["status" => "error", "message" => "Failed to update room phase: " . mysqli_error($link)]);
         }
-
-        $update_room = "UPDATE rooms SET phase = 'night', round = round + 1, action_count = 0, current_turn = ? WHERE id = ?";
-        $stmt_ur = mysqli_prepare($link, $update_room);
-        mysqli_stmt_bind_param($stmt_ur, "si", $current_turn, $room_id);
-        mysqli_stmt_execute($stmt_ur);
-
-        $msg = "Day has ended. Night falls upon the town.";
-        $sql_msg = "INSERT INTO messages (room_id, user_id, message) VALUES (?, NULL, ?)";
-        $stmt_m = mysqli_prepare($link, $sql_msg);
-        mysqli_stmt_bind_param($stmt_m, "is", $room_id, $msg);
-        mysqli_stmt_execute($stmt_m);
-
-        echo json_encode(["status" => "success", "message" => "Transitioned to Night phase"]);
+    } else {
+        // Transition Day to Night (Processing votes is done in process_voting.php, this just forces transition if needed)
+        $update_room = "UPDATE rooms SET phase = 'night', current_turn = 'Killer', action_count = 0, phase_start_time = NOW() WHERE id = $room_id";
+        if(mysqli_query($link, $update_room)){
+            echo json_encode(["status" => "success", "message" => "Transitioned to Night"]);
+        } else {
+            echo json_encode(["status" => "error", "message" => "Failed to update room phase: " . mysqli_error($link)]);
+        }
     }
 }

@@ -20,61 +20,40 @@ class DBSessionHandler implements SessionHandlerInterface {
 
     #[\ReturnTypeWillChange]
     public function read($id) {
-        $sql = "SELECT data FROM sessions WHERE id = ?";
-        if($stmt = mysqli_prepare($this->link, $sql)){
-            mysqli_stmt_bind_param($stmt, "s", $id);
-            if(mysqli_stmt_execute($stmt)){
-                mysqli_stmt_store_result($stmt);
-                if(mysqli_stmt_num_rows($stmt) == 1){
-                    mysqli_stmt_bind_result($stmt, $data);
-                    mysqli_stmt_fetch($stmt);
-                    return $data;
-                }
-            }
-            mysqli_stmt_close($stmt);
+        $id = mysqli_real_escape_string($this->link, $id);
+        $sql = "SELECT data FROM sessions WHERE id = '$id'";
+        $result = mysqli_query($this->link, $sql);
+        if($result && $row = mysqli_fetch_assoc($result)){
+            return $row['data'];
         }
         return "";
     }
 
     #[\ReturnTypeWillChange]
     public function write($id, $data) {
+        $id = mysqli_real_escape_string($this->link, $id);
+        $data = mysqli_real_escape_string($this->link, $data);
         $access = time();
-        $sql = "REPLACE INTO sessions (id, data, access) VALUES (?, ?, ?)";
-        if($stmt = mysqli_prepare($this->link, $sql)){
-            mysqli_stmt_bind_param($stmt, "ssi", $id, $data, $access);
-            $result = mysqli_stmt_execute($stmt);
-            mysqli_stmt_close($stmt);
-            return $result;
-        }
-        return false;
+        $sql = "REPLACE INTO sessions (id, data, access) VALUES ('$id', '$data', '$access')";
+        return (bool)mysqli_query($this->link, $sql);
     }
 
     #[\ReturnTypeWillChange]
     public function destroy($id) {
-        $sql = "DELETE FROM sessions WHERE id = ?";
-        if($stmt = mysqli_prepare($this->link, $sql)){
-            mysqli_stmt_bind_param($stmt, "s", $id);
-            $result = mysqli_stmt_execute($stmt);
-            mysqli_stmt_close($stmt);
-            return $result;
-        }
-        return false;
+        $id = mysqli_real_escape_string($this->link, $id);
+        $sql = "DELETE FROM sessions WHERE id = '$id'";
+        return (bool)mysqli_query($this->link, $sql);
     }
 
     #[\ReturnTypeWillChange]
     public function gc($maxlifetime) {
         $old = time() - $maxlifetime;
-        $sql = "DELETE FROM sessions WHERE access < ?";
-        if($stmt = mysqli_prepare($this->link, $sql)){
-            mysqli_stmt_bind_param($stmt, "i", $old);
-            $result = mysqli_stmt_execute($stmt);
-            mysqli_stmt_close($stmt);
-            return $result;
-        }
-        return false;
+        $sql = "DELETE FROM sessions WHERE access < $old";
+        return (bool)mysqli_query($this->link, $sql);
     }
 }
 
+/*
 if($link){
     $handler = new DBSessionHandler($link);
     session_set_save_handler($handler, true);
@@ -86,3 +65,5 @@ if($link){
 } else {
     session_start(); // Fallback to default handler if DB link is missing
 }
+*/
+session_start(); // Use default session handler for now to debug 500 error
