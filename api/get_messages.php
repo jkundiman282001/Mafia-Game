@@ -44,4 +44,3 @@ if(isset($_GET["room_id"])){
         echo json_encode(["status" => "error", "message" => "Prepare error: " . mysqli_error($link)]);
     }
 }
-?>

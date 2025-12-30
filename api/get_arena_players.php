@@ -41,4 +41,3 @@ if(isset($_GET["room_id"])){
 } else {
     echo json_encode(["status" => "error", "message" => "Missing room_id"]);
 }
-?>

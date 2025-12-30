@@ -55,6 +55,7 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
         <div id="phase-indicator" style="display: inline-block; padding: 0.5rem 2rem; border-radius: 20px; background: rgba(0,0,0,0.5); border: 1px solid var(--red); margin-bottom: 1rem;">
             <span id="current-phase" style="color: var(--red); font-weight: bold; text-transform: uppercase; letter-spacing: 3px;">NIGHT PHASE</span>
             <span id="current-round" style="color: var(--white-dark); margin-left: 1rem;">ROUND 1</span>
+            <span id="phase-timer" style="color: #ffaa00; margin-left: 1rem; font-family: 'Orbitron', sans-serif; display: none;">03:00</span>
         </div>
         <p style="color: var(--white-dark); text-transform: uppercase; letter-spacing: 2px;">Room: <?php echo htmlspecialchars($room['room_name']); ?></p>
     </div>
@@ -174,6 +175,7 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
     const playersList = document.getElementById('players-list');
     const currentPhase = document.getElementById('current-phase');
     const currentRound = document.getElementById('current-round');
+    const phaseTimer = document.getElementById('phase-timer');
     const actionArea = document.getElementById('action-area');
     const actionTitle = document.getElementById('action-title');
     const actionContent = document.getElementById('action-content');
@@ -190,6 +192,7 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
     };
 
     let lastPhase = null;
+    let isShowingResult = false;
 
     function showModal(title, message, duration = null) {
         modalTitle.textContent = title;
@@ -197,16 +200,21 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
         gameModal.style.display = 'flex';
         if (duration) {
             setTimeout(() => {
+                if (title === "INVESTIGATION RESULT") {
+                    isShowingResult = false;
+                }
                 gameModal.style.display = 'none';
             }, duration);
         }
     }
 
     function hideModal() {
+        if (isShowingResult) return;
         gameModal.style.display = 'none';
     }
 
     function updateGameUI() {
+        if (isShowingResult) return;
         fetch(`get_room_status.php?room_id=${roomId}`)
             .then(response => response.json())
             .then(data => {
@@ -215,11 +223,28 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                     gameState = data;
                     lastPhase = data.phase;
 
-                    currentPhase.textContent = `${data.phase} PHASE`;
+                    currentPhase.textContent = `${data.phase.toUpperCase()} PHASE`;
                     currentRound.textContent = `ROUND ${data.round}`;
                     
+                    if (data.phase === 'day') {
+                        phaseTimer.style.display = 'inline';
+                        const minutes = Math.floor(data.time_remaining / 60);
+                        const seconds = data.time_remaining % 60;
+                        phaseTimer.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                        
+                        if (data.time_remaining <= 0) {
+                            // Discussion time ended, process voting (host only)
+                            <?php if ($_SESSION['id'] == $room['creator_id']): ?>
+                            processVoting();
+                            <?php endif; ?>
+                            showModal("VOTING CLOSED", "Processing results...", null);
+                        }
+                    } else {
+                        phaseTimer.style.display = 'none';
+                    }
+
                     if (phaseChanged) {
-                        showModal(`${data.phase} PHASE`, `Round ${data.round} has begun.`, 3000);
+                        showModal(`${data.phase.toUpperCase()} PHASE`, `Round ${data.round} has begun.`, 3000);
                         return; // Don't process turns while phase transition modal is showing
                     }
 
@@ -237,9 +262,12 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                             hideModal();
                             actionArea.style.display = 'block';
                             renderActions();
+                            fetchPlayers(); // Immediately fetch players to show action buttons
                         } else {
                             actionArea.style.display = 'none';
-                            showModal("NIGHT PHASE", `<span class="loading-dots">${data.current_turn}'s Turn</span>`, null);
+                            let turnName = data.current_turn;
+                            if (turnName === 'Detective') turnName = 'Investigator';
+                            showModal("NIGHT PHASE", `<span class="loading-dots">${turnName}'s Turn</span>`, null);
                         }
                     } else {
                         document.getElementById('phase-indicator').style.borderColor = '#ffaa00';
@@ -263,6 +291,54 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
             if (data.status === 'success') {
                 updateGameUI();
                 fetchMessages();
+                if (data.news) {
+                    showModal("NIGHT ENDED", data.news, 5000);
+                }
+            }
+        });
+    }
+
+    function castVote(targetId) {
+        const formData = new FormData();
+        formData.append('room_id', roomId);
+        formData.append('target_id', targetId);
+
+        fetch('vote.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Your vote has been recorded.');
+                fetchPlayers();
+            } else {
+                alert(data.message);
+            }
+        });
+    }
+
+    let isProcessingVote = false;
+    function processVoting() {
+        if (isProcessingVote) return;
+        isProcessingVote = true;
+
+        const formData = new FormData();
+        formData.append('room_id', roomId);
+
+        fetch('process_voting.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            isProcessingVote = false;
+            if (data.status === 'success') {
+                updateGameUI();
+                fetchMessages();
+                if (data.news) {
+                    showModal("VOTING RESULT", data.news, 5000);
+                }
             }
         });
     }
@@ -293,13 +369,19 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
         .then(data => {
             if (data.status === 'success') {
                 if (actionType === 'investigate') {
+                    isShowingResult = true;
                     const resultColor = data.result === 'Bad' ? 'var(--red)' : '#00ff00';
                     showModal("INVESTIGATION RESULT", `The player is <span style="color: ${resultColor}; font-weight: bold;">${data.result}</span>`, 4000);
+                    
+                    // Delay updateGameUI to allow player to see the result
+                    setTimeout(() => {
+                        updateGameUI();
+                    }, 4000);
                 } else {
                     alert('Action recorded for tonight.');
+                    updateGameUI();
                 }
                 actionArea.style.display = 'none';
-                updateGameUI(); // Trigger UI update to show next turn loading screen
             } else {
                 alert(data.message);
             }
@@ -371,23 +453,31 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                             nameSpan.style.color = 'var(--white)';
                             
                             // Add action button if it's night and player is alive and it's not the current user
-                            if (isAlive && gameState.phase === 'night' && gameState.current_turn === myRole && p.user_id != <?php echo $_SESSION['id']; ?>) {
-                                const actionBtn = document.createElement('button');
-                                actionBtn.style.cssText = 'margin-left: 10px; padding: 2px 8px; font-size: 0.7rem; border-radius: 4px; cursor: pointer; border: 1px solid var(--red); background: transparent; color: var(--red);';
-                                
-                                if (myRole === 'Killer') {
-                                    actionBtn.textContent = 'KILL';
-                                    actionBtn.onclick = () => performAction(p.user_id, 'kill');
-                                } else if (myRole === 'Doctor') {
-                                    actionBtn.textContent = 'SAVE';
-                                    actionBtn.onclick = () => performAction(p.user_id, 'save');
-                                } else if (myRole === 'Detective') {
-                                    actionBtn.textContent = 'CHECK';
-                                    actionBtn.onclick = () => performAction(p.user_id, 'investigate');
-                                }
-                                
-                                if (actionBtn.textContent) {
-                                    nameSpan.appendChild(actionBtn);
+                            if (isAlive && p.user_id != <?php echo $_SESSION['id']; ?>) {
+                                if (gameState.phase === 'night' && gameState.current_turn === myRole) {
+                                    const actionBtn = document.createElement('button');
+                                    actionBtn.style.cssText = 'margin-left: 10px; padding: 2px 8px; font-size: 0.7rem; border-radius: 4px; cursor: pointer; border: 1px solid var(--red); background: transparent; color: var(--red);';
+                                    
+                                    if (myRole === 'Killer') {
+                                        actionBtn.textContent = 'KILL';
+                                        actionBtn.onclick = () => performAction(p.user_id, 'kill');
+                                    } else if (myRole === 'Doctor') {
+                                        actionBtn.textContent = 'SAVE';
+                                        actionBtn.onclick = () => performAction(p.user_id, 'save');
+                                    } else if (myRole === 'Detective') {
+                                        actionBtn.textContent = 'CHECK';
+                                        actionBtn.onclick = () => performAction(p.user_id, 'investigate');
+                                    }
+                                    
+                                    if (actionBtn.textContent) {
+                                        nameSpan.appendChild(actionBtn);
+                                    }
+                                } else if (gameState.phase === 'day') {
+                                    const voteBtn = document.createElement('button');
+                                    voteBtn.style.cssText = 'margin-left: 10px; padding: 2px 8px; font-size: 0.7rem; border-radius: 4px; cursor: pointer; border: 1px solid #ffaa00; background: transparent; color: #ffaa00;';
+                                    voteBtn.textContent = 'VOTE';
+                                    voteBtn.onclick = () => castVote(p.user_id);
+                                    nameSpan.appendChild(voteBtn);
                                 }
                             }
                         }

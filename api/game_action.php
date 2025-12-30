@@ -52,7 +52,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
         'Detective' => 'Detective'
     ];
 
-    if($current_turn != $role_map[$role]){
+    if(!isset($role_map[$role]) || $current_turn != $role_map[$role]){
         echo json_encode(["status" => "error", "message" => "It is not your turn yet."]);
         exit;
     }
@@ -61,17 +61,49 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     $update_sql = "";
     $next_turn = "None";
     if($action_type == 'kill' && $role == 'Killer'){
-        $update_sql = "UPDATE rooms SET killer_target = ?, action_count = action_count + 1, current_turn = 'Doctor' WHERE id = ? AND phase = 'night'";
+        $update_sql = "UPDATE rooms SET killer_target = ?, action_count = action_count + 1 WHERE id = ? AND phase = 'night'";
+        $next_turn = 'Doctor';
     } elseif($action_type == 'save' && $role == 'Doctor'){
-        $update_sql = "UPDATE rooms SET doctor_target = ?, action_count = action_count + 1, current_turn = 'Detective' WHERE id = ? AND phase = 'night'";
+        $update_sql = "UPDATE rooms SET doctor_target = ?, action_count = action_count + 1 WHERE id = ? AND phase = 'night'";
+        $next_turn = 'Detective';
     } elseif($action_type == 'investigate' && $role == 'Detective'){
-        $update_sql = "UPDATE rooms SET detective_target = ?, action_count = action_count + 1, current_turn = 'None' WHERE id = ? AND phase = 'night'";
+        $update_sql = "UPDATE rooms SET detective_target = ?, action_count = action_count + 1 WHERE id = ? AND phase = 'night'";
+        $next_turn = 'None';
     }
 
     if($update_sql){
         $stmt_u = mysqli_prepare($link, $update_sql);
         mysqli_stmt_bind_param($stmt_u, "ii", $target_id, $room_id);
         if(mysqli_stmt_execute($stmt_u)){
+            // Find next alive role
+            $current_turn = $next_turn;
+            while($current_turn != 'None'){
+                $sql_check = "SELECT id FROM room_players WHERE room_id = ? AND role = ? AND is_alive = 1";
+                $stmt_check = mysqli_prepare($link, $sql_check);
+                mysqli_stmt_bind_param($stmt_check, "is", $room_id, $current_turn);
+                mysqli_stmt_execute($stmt_check);
+                mysqli_stmt_store_result($stmt_check);
+                $role_exists = mysqli_stmt_num_rows($stmt_check) > 0;
+                mysqli_stmt_close($stmt_check);
+
+                if(!$role_exists){
+                    $next_map = [
+                        'Killer' => 'Doctor',
+                        'Doctor' => 'Detective',
+                        'Detective' => 'None'
+                    ];
+                    $current_turn = $next_map[$current_turn];
+                } else {
+                    break;
+                }
+            }
+
+            $sql_update_turn = "UPDATE rooms SET current_turn = ? WHERE id = ?";
+            $stmt_up = mysqli_prepare($link, $sql_update_turn);
+            mysqli_stmt_bind_param($stmt_up, "si", $current_turn, $room_id);
+            mysqli_stmt_execute($stmt_up);
+            mysqli_stmt_close($stmt_up);
+
             // If investigation, return if the target is Good or Bad
             $extra = [];
             if($action_type == 'investigate'){
@@ -101,4 +133,3 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
         echo json_encode(["status" => "error", "message" => "Invalid action for your role or turn."]);
     }
 }
-?>
