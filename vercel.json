@@ -4,22 +4,22 @@
       "runtime": "vercel-php@0.7.2"
     }
   },
-  "rewrites": [
+  "routes": [
     {
-      "source": "/assets/(.*)",
-      "destination": "/assets/$1"
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
     },
     {
-      "source": "/(.*).php",
-      "destination": "/api/$1.php"
+      "src": "/(index|login|signup|game_room|room|logout|create_room|join_lobby|join_room_action)",
+      "dest": "/api/$1.php"
     },
     {
-      "source": "/",
-      "destination": "/api/index.php"
+      "src": "/(.*).php",
+      "dest": "/api/$1.php"
     },
     {
-      "source": "/((?!api/).*)",
-      "destination": "/api/$1.php"
+      "src": "/",
+      "dest": "/api/index.php"
     }
   ]
 }
