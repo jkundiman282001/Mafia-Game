@@ -474,10 +474,22 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                                     }
                                 } else if (gameState.phase === 'day') {
                                     const voteBtn = document.createElement('button');
-                                    voteBtn.style.cssText = 'margin-left: 10px; padding: 2px 8px; font-size: 0.7rem; border-radius: 4px; cursor: pointer; border: 1px solid #ffaa00; background: transparent; color: #ffaa00;';
-                                    voteBtn.textContent = 'VOTE';
-                                    voteBtn.onclick = () => castVote(p.user_id);
+                                    const isTargeted = data.my_vote == p.user_id;
+                                    voteBtn.style.cssText = `margin-left: 10px; padding: 2px 8px; font-size: 0.7rem; border-radius: 4px; cursor: pointer; border: 1px solid #ffaa00; background: ${isTargeted ? '#ffaa00' : 'transparent'}; color: ${isTargeted ? '#000' : '#ffaa00'};`;
+                                    voteBtn.textContent = isTargeted ? 'VOTED' : 'VOTE';
+                                    voteBtn.onclick = () => {
+                                        if (confirm(`Are you sure you want to vote for ${p.username}?`)) {
+                                            castVote(p.user_id);
+                                        }
+                                    };
                                     nameSpan.appendChild(voteBtn);
+
+                                    if (p.vote_count > 0) {
+                                        const countSpan = document.createElement('span');
+                                        countSpan.style.cssText = 'margin-left: 8px; font-size: 0.8rem; color: #ffaa00; font-weight: bold;';
+                                        countSpan.textContent = `(${p.vote_count})`;
+                                        nameSpan.appendChild(countSpan);
+                                    }
                                 }
                             }
                         }
