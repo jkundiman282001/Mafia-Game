@@ -52,6 +52,10 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
 <div class="container" style="padding-top: 100px; padding-bottom: 50px;">
     <div style="text-align: center; margin-bottom: 3rem;">
         <h2 class="section-title" style="margin-bottom: 0.5rem;">GAME ARENA</h2>
+        <div id="phase-indicator" style="display: inline-block; padding: 0.5rem 2rem; border-radius: 20px; background: rgba(0,0,0,0.5); border: 1px solid var(--red); margin-bottom: 1rem;">
+            <span id="current-phase" style="color: var(--red); font-weight: bold; text-transform: uppercase; letter-spacing: 3px;">NIGHT PHASE</span>
+            <span id="current-round" style="color: var(--white-dark); margin-left: 1rem;">ROUND 1</span>
+        </div>
         <p style="color: var(--white-dark); text-transform: uppercase; letter-spacing: 2px;">Room: <?php echo htmlspecialchars($room['room_name']); ?></p>
     </div>
 
@@ -69,18 +73,15 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                 </div>
             </div>
             
-            <div style="margin-top: 2rem;">
-                <h4 style="color: var(--white-dark); font-size: 0.9rem; margin-bottom: 1rem; text-transform: uppercase;">Objective</h4>
-                <p style="font-size: 0.9rem; line-height: 1.6;">
-                    <?php 
-                    switch($my_role){
-                        case 'Killer': echo "Eliminate all Town members without getting caught. Work with other Killers if any."; break;
-                        case 'Detective': echo "Investigate players each night to find out if they are Killers."; break;
-                        case 'Doctor': echo "Choose one player to protect each night. You can save them from being killed."; break;
-                        default: echo "Find and execute all the Killers before they eliminate the entire Town."; break;
-                    }
-                    ?>
-                </p>
+            <div id="action-area" style="margin-top: 2rem; display: none;">
+                <h4 id="action-title" style="color: var(--white-dark); font-size: 0.9rem; margin-bottom: 1rem; text-transform: uppercase;">Your Action</h4>
+                <div id="action-content">
+                    <!-- Action buttons will be injected here -->
+                </div>
+            </div>
+            
+            <div id="host-controls" style="margin-top: 2rem; display: <?php echo $_SESSION['id'] == $room['creator_id'] ? 'block' : 'none'; ?>;">
+                <button id="next-phase-btn" class="cta-button" style="width: 100%; padding: 0.8rem;">Advance to Next Phase</button>
             </div>
         </div>
 
@@ -115,10 +116,109 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
 
 <script>
     const roomId = <?php echo $room_id; ?>;
+    const myRole = "<?php echo $my_role; ?>";
+    const isAlive = <?php echo $is_alive ? 'true' : 'false'; ?>;
     const chatBox = document.getElementById('chat-box');
     const chatForm = document.getElementById('chat-form');
     const messageInput = document.getElementById('message-input');
     const playersList = document.getElementById('players-list');
+    const currentPhase = document.getElementById('current-phase');
+    const currentRound = document.getElementById('current-round');
+    const actionArea = document.getElementById('action-area');
+    const actionTitle = document.getElementById('action-title');
+    const actionContent = document.getElementById('action-content');
+    const nextPhaseBtn = document.getElementById('next-phase-btn');
+
+    let gameState = {
+        phase: 'night',
+        round: 1,
+        action_count: 0
+    };
+
+    function updateGameUI() {
+        fetch(`get_room_status.php?room_id=${roomId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    gameState = data;
+                    currentPhase.textContent = `${data.phase} PHASE`;
+                    currentRound.textContent = `ROUND ${data.round}`;
+                    
+                    // Show/hide action area
+                    if (isAlive && data.phase === 'night') {
+                        actionArea.style.display = 'block';
+                        renderActions();
+                    } else {
+                        actionArea.style.display = 'none';
+                    }
+
+                    // Style based on phase
+                    if (data.phase === 'night') {
+                        document.getElementById('phase-indicator').style.borderColor = 'var(--red)';
+                        currentPhase.style.color = 'var(--red)';
+                    } else {
+                        document.getElementById('phase-indicator').style.borderColor = '#ffaa00';
+                        currentPhase.style.color = '#ffaa00';
+                    }
+                }
+            });
+    }
+
+    function renderActions() {
+        if (myRole === 'Killer') {
+            actionTitle.textContent = "CHOOSE A TARGET TO ELIMINATE";
+        } else if (myRole === 'Doctor') {
+            actionTitle.textContent = "CHOOSE A PLAYER TO PROTECT";
+        } else if (myRole === 'Detective') {
+            actionTitle.textContent = "CHOOSE A PLAYER TO INVESTIGATE";
+        } else {
+            actionArea.style.display = 'none';
+        }
+    }
+
+    function performAction(targetId, actionType) {
+        const formData = new FormData();
+        formData.append('room_id', roomId);
+        formData.append('target_id', targetId);
+        formData.append('action_type', actionType);
+
+        fetch('game_action.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                if (actionType === 'investigate') {
+                    alert(`Investigation result: Player is a ${data.role}`);
+                } else {
+                    alert('Action recorded for tonight.');
+                }
+                actionArea.style.display = 'none';
+            } else {
+                alert(data.message);
+            }
+        });
+    }
+
+    if (nextPhaseBtn) {
+        nextPhaseBtn.addEventListener('click', function() {
+            const formData = new FormData();
+            formData.append('room_id', roomId);
+
+            fetch('transition_phase.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    updateGameUI();
+                    fetchMessages();
+                }
+            });
+        });
+    }
 
     function fetchMessages() {
         fetch(`get_messages.php?room_id=${roomId}`)
@@ -164,6 +264,27 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                             nameSpan.style.cssText = 'color: var(--white-dark); text-decoration: line-through;';
                         } else {
                             nameSpan.style.color = 'var(--white)';
+                            
+                            // Add action button if it's night and player is alive and it's not the current user
+                            if (isAlive && gameState.phase === 'night' && p.user_id != <?php echo $_SESSION['id']; ?>) {
+                                const actionBtn = document.createElement('button');
+                                actionBtn.style.cssText = 'margin-left: 10px; padding: 2px 8px; font-size: 0.7rem; border-radius: 4px; cursor: pointer; border: 1px solid var(--red); background: transparent; color: var(--red);';
+                                
+                                if (myRole === 'Killer') {
+                                    actionBtn.textContent = 'KILL';
+                                    actionBtn.onclick = () => performAction(p.user_id, 'kill');
+                                } else if (myRole === 'Doctor') {
+                                    actionBtn.textContent = 'SAVE';
+                                    actionBtn.onclick = () => performAction(p.user_id, 'save');
+                                } else if (myRole === 'Detective') {
+                                    actionBtn.textContent = 'CHECK';
+                                    actionBtn.onclick = () => performAction(p.user_id, 'investigate');
+                                }
+                                
+                                if (actionBtn.textContent) {
+                                    nameSpan.appendChild(actionBtn);
+                                }
+                            }
                         }
                         
                         const statusSpan = document.createElement('span');
@@ -205,8 +326,10 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
     });
 
     // Initial fetch and polling
+    updateGameUI();
     fetchMessages();
     fetchPlayers();
+    setInterval(updateGameUI, 3000);
     setInterval(fetchMessages, 2000);
     setInterval(fetchPlayers, 5000);
 </script>
