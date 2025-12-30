@@ -2,6 +2,11 @@
 require_once __DIR__ . "/includes/session.php";
 require_once __DIR__ . "/includes/config.php";
 
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
+header('Content-Type: application/json');
+
 // Check if user is logged in
 if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){
     echo json_encode(["status" => "error", "message" => "Unauthorized"]);
@@ -11,9 +16,9 @@ if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){
 if(isset($_GET["room_id"])){
     $room_id = $_GET["room_id"];
     
-    $sql = "SELECT m.message, m.created_at, u.username 
+    $sql = "SELECT m.message, m.created_at, u.username, m.user_id 
             FROM messages m 
-            JOIN users u ON m.user_id = u.id 
+            LEFT JOIN users u ON m.user_id = u.id 
             WHERE m.room_id = ? 
             ORDER BY m.created_at ASC";
             
@@ -24,6 +29,9 @@ if(isset($_GET["room_id"])){
             
             $messages = [];
             while($row = mysqli_fetch_assoc($result)){
+                if($row['user_id'] === null){
+                    $row['username'] = 'SYSTEM';
+                }
                 $messages[] = $row;
             }
             

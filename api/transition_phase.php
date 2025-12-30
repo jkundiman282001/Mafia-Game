@@ -2,6 +2,9 @@
 require_once __DIR__ . "/includes/session.php";
 require_once __DIR__ . "/includes/config.php";
 
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
 header('Content-Type: application/json');
 
 if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){
@@ -49,10 +52,9 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
         }
 
         // Add to messages table so everyone sees it in chat
-        $sql_msg = "INSERT INTO messages (room_id, user_id, message) VALUES (?, ?, ?)";
+        $sql_msg = "INSERT INTO messages (room_id, user_id, message) VALUES (?, NULL, ?)";
         $stmt_m = mysqli_prepare($link, $sql_msg);
-        $system_id = 0; // Use 0 or a specific system user ID
-        mysqli_stmt_bind_param($stmt_m, "iis", $room_id, $system_id, $message);
+        mysqli_stmt_bind_param($stmt_m, "is", $room_id, $message);
         mysqli_stmt_execute($stmt_m);
 
         // Transition to Day
@@ -70,7 +72,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
         mysqli_stmt_execute($stmt_ur);
 
         $msg = "Day has ended. Night falls upon the town.";
-        $sql_msg = "INSERT INTO messages (room_id, user_id, message) VALUES (?, 0, ?)";
+        $sql_msg = "INSERT INTO messages (room_id, user_id, message) VALUES (?, NULL, ?)";
         $stmt_m = mysqli_prepare($link, $sql_msg);
         mysqli_stmt_bind_param($stmt_m, "is", $room_id, $msg);
         mysqli_stmt_execute($stmt_m);

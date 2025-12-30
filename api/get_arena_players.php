@@ -2,6 +2,9 @@
 require_once __DIR__ . "/includes/session.php";
 require_once __DIR__ . "/includes/config.php";
 
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
 header('Content-Type: application/json');
 
 if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){
@@ -12,7 +15,7 @@ if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){
 if(isset($_GET["room_id"])){
     $room_id = $_GET["room_id"];
     
-    $sql = "SELECT u.username, rp.is_alive, rp.role 
+    $sql = "SELECT rp.user_id, u.username, rp.is_alive, rp.role 
             FROM room_players rp 
             JOIN users u ON rp.user_id = u.id 
             WHERE rp.room_id = ?";
@@ -24,6 +27,7 @@ if(isset($_GET["room_id"])){
             $players = [];
             while($row = mysqli_fetch_assoc($result)){
                 $players[] = [
+                    "user_id" => $row["user_id"],
                     "username" => $row["username"],
                     "is_alive" => (bool)$row["is_alive"]
                 ];
