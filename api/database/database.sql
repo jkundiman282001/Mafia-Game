@@ -32,3 +32,13 @@ CREATE TABLE IF NOT EXISTS sessions (
     data BLOB NOT NULL,
     access INT(10) UNSIGNED NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS messages (
+    id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    room_id INT NOT NULL,
+    user_id INT NOT NULL,
+    message TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (room_id) REFERENCES rooms(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);

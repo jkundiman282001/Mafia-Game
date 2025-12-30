@@ -67,15 +67,75 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
     <div class="roles-grid" style="grid-template-columns: 3fr 1fr;">
         <!-- Game Area (Chat/Log) -->
         <div class="role-card" style="text-align: left; height: 500px; display: flex; flex-direction: column;">
-            <h3 style="border-bottom: 1px solid var(--red); padding-bottom: 1rem; margin-bottom: 1rem;">Game Log</h3>
-            <div style="flex-grow: 1; overflow-y: auto; padding: 1rem; background: rgba(0,0,0,0.3); border-radius: 10px; margin-bottom: 1rem;">
-                <p style="color: var(--white-dark); font-style: italic;">Welcome to the room! Waiting for players to join...</p>
+            <h3 style="border-bottom: 1px solid var(--red); padding-bottom: 1rem; margin-bottom: 1rem;">Chat Room</h3>
+            <div id="chat-box" style="flex-grow: 1; overflow-y: auto; padding: 1rem; background: rgba(0,0,0,0.3); border-radius: 10px; margin-bottom: 1rem;">
+                <p style="color: var(--white-dark); font-style: italic;">Welcome to the room! Loading messages...</p>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <input type="text" class="form-control" placeholder="Type a message..." style="margin-bottom: 0;">
-                <button class="cta-button" style="padding: 0.5rem 1.5rem; font-size: 1rem;">Send</button>
-            </div>
+            <form id="chat-form" style="display: flex; gap: 10px;">
+                <input type="hidden" id="room_id" value="<?php echo $room_id; ?>">
+                <input type="text" id="message-input" class="form-control" placeholder="Type a message..." style="margin-bottom: 0;" autocomplete="off">
+                <button type="submit" class="cta-button" style="padding: 0.5rem 1.5rem; font-size: 1rem;">Send</button>
+            </form>
         </div>
+
+        <script>
+            const chatBox = document.getElementById('chat-box');
+            const chatForm = document.getElementById('chat-form');
+            const messageInput = document.getElementById('message-input');
+            const roomId = document.getElementById('room_id').value;
+
+            function fetchMessages() {
+                fetch(`get_messages.php?room_id=${roomId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            const isScrolledToBottom = chatBox.scrollHeight - chatBox.clientHeight <= chatBox.scrollTop + 1;
+                            
+                            chatBox.innerHTML = '';
+                            if (data.messages.length === 0) {
+                                chatBox.innerHTML = '<p style="color: var(--white-dark); font-style: italic;">No messages yet. Start the conversation!</p>';
+                            } else {
+                                data.messages.forEach(msg => {
+                                    const msgDiv = document.createElement('div');
+                                    msgDiv.style.marginBottom = '0.5rem';
+                                    msgDiv.innerHTML = `<strong style="color: var(--red);">${msg.username}:</strong> <span style="color: var(--white);">${msg.message}</span>`;
+                                    chatBox.appendChild(msgDiv);
+                                });
+                            }
+                            
+                            if (isScrolledToBottom) {
+                                chatBox.scrollTop = chatBox.scrollHeight;
+                            }
+                        }
+                    });
+            }
+
+            chatForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const message = messageInput.value.trim();
+                if (!message) return;
+
+                const formData = new FormData();
+                formData.append('room_id', roomId);
+                formData.append('message', message);
+
+                fetch('send_message.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        messageInput.value = '';
+                        fetchMessages();
+                    }
+                });
+            });
+
+            // Initial fetch and poll every 2 seconds
+            fetchMessages();
+            setInterval(fetchMessages, 2000);
+        </script>
 
         <!-- Player List -->
         <div class="role-card" style="text-align: left;">
