@@ -10,7 +10,7 @@
       "dest": "/assets/$1"
     },
     {
-      "src": "/(index|login|signup|game_room|room|logout|create_room|join_lobby|join_room_action|send_message|get_messages|start_game_action)",
+      "src": "/(index|login|signup|game_room|room|arena|logout|create_room|join_lobby|join_room_action|send_message|get_messages|get_room_status|get_arena_players|start_game_action)",
       "dest": "/api/$1.php"
     },
     {

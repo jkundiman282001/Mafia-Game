@@ -82,9 +82,9 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["room_id"])){
 
         mysqli_commit($link);
         
-        // Save session and redirect to the game play page (you might need to create this)
+        // Save session and redirect to the arena
         session_write_close();
-        header("location: room.php?id=" . $room_id);
+        header("location: arena.php?id=" . $room_id);
         exit;
         
     } catch (Exception $e) {

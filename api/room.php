@@ -146,6 +146,18 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
             // Initial fetch and poll every 2 seconds
             fetchMessages();
             setInterval(fetchMessages, 2000);
+
+            // Poll for game status
+            function checkGameStatus() {
+                fetch(`get_room_status.php?room_id=${roomId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success' && data.room_status === 'in_progress') {
+                            window.location.href = `arena.php?id=${roomId}`;
+                        }
+                    });
+            }
+            setInterval(checkGameStatus, 3000);
         </script>
 
         <!-- Player List -->
