@@ -1,26 +1,25 @@
 {
-  "builds": [
-    {
-      "src": "*.php",
-      "use": "vercel-php@0.6.0"
-    },
-    {
-      "src": "assets/**",
-      "use": "@vercel/static"
+  "functions": {
+    "api/*.php": {
+      "runtime": "vercel-php@0.6.0"
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/assets/(.*)",
-      "dest": "/assets/$1"
+      "source": "/assets/(.*)",
+      "destination": "/assets/$1"
     },
     {
-      "src": "/(.*).php",
-      "dest": "/$1.php"
+      "source": "/(.*).php",
+      "destination": "/api/$1.php"
     },
     {
-      "src": "/(.*)",
-      "dest": "/index.php"
+      "source": "/",
+      "destination": "/api/index.php"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/api/$1.php"
     }
   ]
 }
