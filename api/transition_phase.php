@@ -58,7 +58,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
         mysqli_stmt_execute($stmt_m);
 
         // Transition to Day
-        $update_room = "UPDATE rooms SET phase = 'day', action_count = 0, killer_target = NULL, doctor_target = NULL, detective_target = NULL WHERE id = ?";
+        $update_room = "UPDATE rooms SET phase = 'day', action_count = 0, current_turn = 'None', killer_target = NULL, doctor_target = NULL, detective_target = NULL WHERE id = ?";
         $stmt_ur = mysqli_prepare($link, $update_room);
         mysqli_stmt_bind_param($stmt_ur, "i", $room_id);
         mysqli_stmt_execute($stmt_ur);
@@ -66,7 +66,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
         echo json_encode(["status" => "success", "message" => "Transitioned to Day phase", "news" => $message]);
     } else {
         // Day to Night transition (voting would happen here, but for now just skip)
-        $update_room = "UPDATE rooms SET phase = 'night', round = round + 1, action_count = 0 WHERE id = ?";
+        $update_room = "UPDATE rooms SET phase = 'night', round = round + 1, action_count = 0, current_turn = 'Killer' WHERE id = ?";
         $stmt_ur = mysqli_prepare($link, $update_room);
         mysqli_stmt_bind_param($stmt_ur, "i", $room_id);
         mysqli_stmt_execute($stmt_ur);

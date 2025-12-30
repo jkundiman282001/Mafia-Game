@@ -59,6 +59,56 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
         <p style="color: var(--white-dark); text-transform: uppercase; letter-spacing: 2px;">Room: <?php echo htmlspecialchars($room['room_name']); ?></p>
     </div>
 
+    <style>
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none;
+        }
+        .modal-content {
+            background: var(--black-light);
+            padding: 3rem;
+            border-radius: 20px;
+            border: 2px solid var(--red);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 0 30px rgba(255, 0, 64, 0.3);
+        }
+        .modal-title {
+            font-size: 2.5rem;
+            color: var(--white);
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+        }
+        .loading-dots:after {
+            content: ' .';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: ' .'; }
+            40% { content: ' . .'; }
+            60% { content: ' . . .'; }
+            80%, 100% { content: ' . . . .'; }
+        }
+    </style>
+
+    <div id="game-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="modal-title" class="modal-title">NIGHT PHASE</h2>
+            <p id="modal-message" style="color: var(--white-dark); font-size: 1.2rem;"></p>
+        </div>
+    </div>
+
     <div class="arena-container" style="display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 2rem; align-items: flex-start;">
         <!-- Left Column: Player Info -->
         <div class="role-card" style="text-align: left;">
@@ -128,40 +178,93 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
     const actionTitle = document.getElementById('action-title');
     const actionContent = document.getElementById('action-content');
     const nextPhaseBtn = document.getElementById('next-phase-btn');
+    const gameModal = document.getElementById('game-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalMessage = document.getElementById('modal-message');
 
     let gameState = {
         phase: 'night',
         round: 1,
-        action_count: 0
+        action_count: 0,
+        current_turn: 'Killer'
     };
+
+    let lastPhase = null;
+
+    function showModal(title, message, duration = null) {
+        modalTitle.textContent = title;
+        modalMessage.innerHTML = message;
+        gameModal.style.display = 'flex';
+        if (duration) {
+            setTimeout(() => {
+                gameModal.style.display = 'none';
+            }, duration);
+        }
+    }
+
+    function hideModal() {
+        gameModal.style.display = 'none';
+    }
 
     function updateGameUI() {
         fetch(`get_room_status.php?room_id=${roomId}`)
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
+                    const phaseChanged = lastPhase !== data.phase;
                     gameState = data;
+                    lastPhase = data.phase;
+
                     currentPhase.textContent = `${data.phase} PHASE`;
                     currentRound.textContent = `ROUND ${data.round}`;
                     
-                    // Show/hide action area
-                    if (isAlive && data.phase === 'night') {
-                        actionArea.style.display = 'block';
-                        renderActions();
-                    } else {
-                        actionArea.style.display = 'none';
+                    if (phaseChanged) {
+                        showModal(`${data.phase} PHASE`, `Round ${data.round} has begun.`, 3000);
+                        return; // Don't process turns while phase transition modal is showing
                     }
 
-                    // Style based on phase
                     if (data.phase === 'night') {
                         document.getElementById('phase-indicator').style.borderColor = 'var(--red)';
                         currentPhase.style.color = 'var(--red)';
+                        
+                        if (data.current_turn === 'None') {
+                            // If all turns are done, auto transition to day (host only)
+                            <?php if ($_SESSION['id'] == $room['creator_id']): ?>
+                            autoTransitionToDay();
+                            <?php endif; ?>
+                            showModal("NIGHT ENDING", "Processing night results...", null);
+                        } else if (isAlive && data.current_turn === myRole) {
+                            hideModal();
+                            actionArea.style.display = 'block';
+                            renderActions();
+                        } else {
+                            actionArea.style.display = 'none';
+                            showModal("NIGHT PHASE", `<span class="loading-dots">${data.current_turn}'s Turn</span>`, null);
+                        }
                     } else {
                         document.getElementById('phase-indicator').style.borderColor = '#ffaa00';
                         currentPhase.style.color = '#ffaa00';
+                        hideModal();
+                        actionArea.style.display = 'none';
                     }
                 }
             });
+    }
+
+    function autoTransitionToDay() {
+        const formData = new FormData();
+        formData.append('room_id', roomId);
+        fetch('transition_phase.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                updateGameUI();
+                fetchMessages();
+            }
+        });
     }
 
     function renderActions() {
@@ -190,11 +293,13 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
         .then(data => {
             if (data.status === 'success') {
                 if (actionType === 'investigate') {
-                    alert(`Investigation result: Player is a ${data.role}`);
+                    const resultColor = data.result === 'Bad' ? 'var(--red)' : '#00ff00';
+                    showModal("INVESTIGATION RESULT", `The player is <span style="color: ${resultColor}; font-weight: bold;">${data.result}</span>`, 4000);
                 } else {
                     alert('Action recorded for tonight.');
                 }
                 actionArea.style.display = 'none';
+                updateGameUI(); // Trigger UI update to show next turn loading screen
             } else {
                 alert(data.message);
             }
@@ -266,7 +371,7 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                             nameSpan.style.color = 'var(--white)';
                             
                             // Add action button if it's night and player is alive and it's not the current user
-                            if (isAlive && gameState.phase === 'night' && p.user_id != <?php echo $_SESSION['id']; ?>) {
+                            if (isAlive && gameState.phase === 'night' && gameState.current_turn === myRole && p.user_id != <?php echo $_SESSION['id']; ?>) {
                                 const actionBtn = document.createElement('button');
                                 actionBtn.style.cssText = 'margin-left: 10px; padding: 2px 8px; font-size: 0.7rem; border-radius: 4px; cursor: pointer; border: 1px solid var(--red); background: transparent; color: var(--red);';
                                 

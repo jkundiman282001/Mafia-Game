@@ -33,22 +33,46 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
 
     $role = $player['role'];
 
-    // 2. Update room with action
+    // 1.5 Verify if it's the correct turn
+    $sql_turn = "SELECT current_turn FROM rooms WHERE id = ? AND phase = 'night'";
+    $stmt_turn = mysqli_prepare($link, $sql_turn);
+    mysqli_stmt_bind_param($stmt_turn, "i", $room_id);
+    mysqli_stmt_execute($stmt_turn);
+    $room_turn_data = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_turn));
+
+    if(!$room_turn_data){
+        echo json_encode(["status" => "error", "message" => "It is not night phase."]);
+        exit;
+    }
+
+    $current_turn = $room_turn_data['current_turn'];
+    $role_map = [
+        'Killer' => 'Killer',
+        'Doctor' => 'Doctor',
+        'Detective' => 'Detective'
+    ];
+
+    if($current_turn != $role_map[$role]){
+        echo json_encode(["status" => "error", "message" => "It is not your turn yet."]);
+        exit;
+    }
+
+    // 2. Update room with action and move to next turn
     $update_sql = "";
+    $next_turn = "None";
     if($action_type == 'kill' && $role == 'Killer'){
-        $update_sql = "UPDATE rooms SET killer_target = ?, action_count = action_count + 1 WHERE id = ? AND phase = 'night'";
+        $update_sql = "UPDATE rooms SET killer_target = ?, action_count = action_count + 1, current_turn = 'Doctor' WHERE id = ? AND phase = 'night'";
     } elseif($action_type == 'save' && $role == 'Doctor'){
-        $update_sql = "UPDATE rooms SET doctor_target = ?, action_count = action_count + 1 WHERE id = ? AND phase = 'night'";
+        $update_sql = "UPDATE rooms SET doctor_target = ?, action_count = action_count + 1, current_turn = 'Detective' WHERE id = ? AND phase = 'night'";
     } elseif($action_type == 'investigate' && $role == 'Detective'){
-        // Investigation is immediate for the player but needs to increment action count
-        $update_sql = "UPDATE rooms SET detective_target = ?, action_count = action_count + 1 WHERE id = ? AND phase = 'night'";
+        $update_sql = "UPDATE rooms SET detective_target = ?, action_count = action_count + 1, current_turn = 'None' WHERE id = ? AND phase = 'night'";
     }
 
     if($update_sql){
         $stmt_u = mysqli_prepare($link, $update_sql);
         mysqli_stmt_bind_param($stmt_u, "ii", $target_id, $room_id);
         if(mysqli_stmt_execute($stmt_u)){
-            // If investigation, return the target's role
+            // If investigation, return if the target is Good or Bad
             $extra = [];
             if($action_type == 'investigate'){
                 $sql_target = "SELECT role FROM room_players WHERE room_id = ? AND user_id = ?";
@@ -57,26 +81,24 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
                 mysqli_stmt_execute($stmt_t);
                 $res_t = mysqli_stmt_get_result($stmt_t);
                 $target_player = mysqli_fetch_assoc($res_t);
-                $extra['role'] = $target_player['role'];
+                
+                if($target_player){
+                    if($target_player['role'] == 'Killer'){
+                        $extra['result'] = 'Bad';
+                    } else {
+                        $extra['result'] = 'Good';
+                    }
+                } else {
+                    $extra['result'] = 'Unknown';
+                }
             }
-            
-            // Check if all actions are done to transition to day
-            // For now, let's assume 3 main actions (Killer, Doctor, Detective)
-            // We can make this dynamic later based on living roles
-            $sql_room = "SELECT action_count FROM rooms WHERE id = ?";
-            $stmt_r = mysqli_prepare($link, $sql_room);
-            mysqli_stmt_bind_param($stmt_r, "i", $room_id);
-            mysqli_stmt_execute($stmt_r);
-            $room_res = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_r));
-            
-            // Trigger phase check/transition if needed (we'll implement this logic in a separate function or endpoint)
             
             echo json_encode(array_merge(["status" => "success", "message" => "Action recorded"], $extra));
         } else {
-            echo json_encode(["status" => "error", "message" => "Failed to record action"]);
+            echo json_encode(["status" => "error", "message" => "Failed to record action: " . mysqli_error($link)]);
         }
     } else {
-        echo json_encode(["status" => "error", "message" => "Invalid action for your role."]);
+        echo json_encode(["status" => "error", "message" => "Invalid action for your role or turn."]);
     }
 }
 ?>

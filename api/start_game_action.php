@@ -65,8 +65,8 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["room_id"])){
     // 4. Update Database with roles and set room status to 'in_progress'
     mysqli_begin_transaction($link);
     try {
-        // Update Room Status
-        $sql_room = "UPDATE rooms SET status = 'in_progress' WHERE id = ?";
+        // Update Room Status and set initial turn
+        $sql_room = "UPDATE rooms SET status = 'in_progress', phase = 'night', current_turn = 'Killer', round = 1, action_count = 0 WHERE id = ?";
         $stmt_r = mysqli_prepare($link, $sql_room);
         mysqli_stmt_bind_param($stmt_r, "i", $room_id);
         mysqli_stmt_execute($stmt_r);
