@@ -68,11 +68,10 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.9);
-            display: flex;
+            display: none; /* Initially hidden */
             justify-content: center;
             align-items: center;
             z-index: 1000;
-            display: none;
         }
         .modal-content {
             background: var(--black-light);
@@ -166,8 +165,8 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
 </div>
 
 <script>
-    const roomId = <?php echo $room_id; ?>;
-    const myRole = "<?php echo $my_role; ?>";
+    const roomId = <?php echo (int)$room_id; ?>;
+    const myRole = "<?php echo htmlspecialchars($my_role); ?>";
     const isAlive = <?php echo $is_alive ? 'true' : 'false'; ?>;
     const chatBox = document.getElementById('chat-box');
     const chatForm = document.getElementById('chat-form');
@@ -193,37 +192,52 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
 
     let lastPhase = null;
     let isShowingResult = false;
+    let modalTimeout = null;
 
     function showModal(title, message, duration = null) {
+        if (modalTimeout) {
+            clearTimeout(modalTimeout);
+            modalTimeout = null;
+        }
+        
         modalTitle.textContent = title;
         modalMessage.innerHTML = message;
         gameModal.style.display = 'flex';
+        
         if (duration) {
-            setTimeout(() => {
+            modalTimeout = setTimeout(() => {
                 if (title === "INVESTIGATION RESULT") {
                     isShowingResult = false;
                 }
                 gameModal.style.display = 'none';
+                modalTimeout = null;
             }, duration);
         }
     }
 
     function hideModal() {
         if (isShowingResult) return;
+        if (modalTimeout) {
+            clearTimeout(modalTimeout);
+            modalTimeout = null;
+        }
         gameModal.style.display = 'none';
     }
 
     function updateGameUI() {
         if (isShowingResult) return;
         fetch(`get_room_status.php?room_id=${roomId}`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
             .then(data => {
                 if (data.status === 'success') {
                     const phaseChanged = lastPhase !== data.phase;
                     gameState = data;
                     lastPhase = data.phase;
 
-                    currentPhase.textContent = `${data.phase.toUpperCase()} PHASE`;
+                    currentPhase.textContent = `${(data.phase || '').toUpperCase()} PHASE`;
                     currentRound.textContent = `ROUND ${data.round}`;
                     
                     if (data.phase === 'day') {
@@ -244,7 +258,7 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                     }
 
                     if (phaseChanged) {
-                        showModal(`${data.phase.toUpperCase()} PHASE`, `Round ${data.round} has begun.`, 3000);
+                        showModal(`${(data.phase || '').toUpperCase()} PHASE`, `Round ${data.round} has begun.`, 3000);
                         return; // Don't process turns while phase transition modal is showing
                     }
 
@@ -276,6 +290,9 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                         actionArea.style.display = 'none';
                     }
                 }
+            })
+            .catch(error => {
+                console.error('Error updating UI:', error);
             });
     }
 
@@ -430,12 +447,11 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                         chatBox.scrollTop = chatBox.scrollHeight;
                     }
                 }
-            });
+            })
+            .catch(error => console.error('Error fetching messages:', error));
     }
 
     function fetchPlayers() {
-        // We could create a get_players.php, but for now let's just use a simple fetch within arena.php
-        // Or better, let's just refresh this part every 10 seconds since it doesn't change much
         fetch(`get_arena_players.php?room_id=${roomId}`)
             .then(response => response.json())
             .then(data => {
@@ -446,54 +462,45 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                         li.style.cssText = 'padding: 0.7rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;';
                         
                         const nameSpan = document.createElement('span');
-                        nameSpan.textContent = p.username;
+                        nameSpan.textContent = p.username + (p.user_id == <?php echo $_SESSION['id']; ?> ? ' (You)' : '');
+                        
+                        let actionHtml = '';
                         if (!p.is_alive) {
                             nameSpan.style.cssText = 'color: var(--white-dark); text-decoration: line-through;';
+                            actionHtml = '<span style="color: var(--red); font-size: 0.7rem;">DEAD</span>';
                         } else {
                             nameSpan.style.color = 'var(--white)';
                             
-                            // Add action button if it's night and player is alive and it's not the current user
                             if (isAlive && p.user_id != <?php echo $_SESSION['id']; ?>) {
                                 if (gameState.phase === 'night' && gameState.current_turn === myRole) {
-                                    const actionBtn = document.createElement('button');
-                                    actionBtn.style.cssText = 'margin-left: 10px; padding: 2px 8px; font-size: 0.7rem; border-radius: 4px; cursor: pointer; border: 1px solid var(--red); background: transparent; color: var(--red);';
+                                    let btnText = "CHOOSE";
+                                    let actionType = "";
+                                    if (myRole === 'Killer') { btnText = "ELIMINATE"; actionType = "kill"; }
+                                    if (myRole === 'Doctor') { btnText = "PROTECT"; actionType = "save"; }
+                                    if (myRole === 'Detective') { btnText = "INVESTIGATE"; actionType = "investigate"; }
                                     
-                                    if (myRole === 'Killer') {
-                                        actionBtn.textContent = 'KILL';
-                                        actionBtn.onclick = () => performAction(p.user_id, 'kill');
-                                    } else if (myRole === 'Doctor') {
-                                        actionBtn.textContent = 'SAVE';
-                                        actionBtn.onclick = () => performAction(p.user_id, 'save');
-                                    } else if (myRole === 'Detective') {
-                                        actionBtn.textContent = 'CHECK';
-                                        actionBtn.onclick = () => performAction(p.user_id, 'investigate');
-                                    }
-                                    
-                                    if (actionBtn.textContent) {
-                                        nameSpan.appendChild(actionBtn);
+                                    if (actionType) {
+                                        actionHtml = `<button onclick="performAction(${p.user_id}, '${actionType}')" class="action-btn" style="padding: 0.2rem 0.6rem; font-size: 0.7rem;">${btnText}</button>`;
                                     }
                                 } else if (gameState.phase === 'day') {
-                                    const voteBtn = document.createElement('button');
-                                    const isTargeted = data.my_vote == p.user_id;
-                                    voteBtn.style.cssText = `margin-left: 10px; padding: 2px 8px; font-size: 0.7rem; border-radius: 4px; cursor: pointer; border: 1px solid #ffaa00; background: ${isTargeted ? '#ffaa00' : 'transparent'}; color: ${isTargeted ? '#000' : '#ffaa00'};`;
-                                    voteBtn.textContent = isTargeted ? 'VOTED' : 'VOTE';
-                                    voteBtn.onclick = () => {
-                                        if (confirm(`Are you sure you want to vote for ${p.username}?`)) {
-                                            castVote(p.user_id);
-                                        }
-                                    };
-                                    nameSpan.appendChild(voteBtn);
-
-                                    if (p.vote_count > 0) {
-                                        const countSpan = document.createElement('span');
-                                        countSpan.style.cssText = 'margin-left: 8px; font-size: 0.8rem; color: #ffaa00; font-weight: bold;';
-                                        countSpan.textContent = `(${p.vote_count})`;
-                                        nameSpan.appendChild(countSpan);
-                                    }
+                                    actionHtml = `<button onclick="castVote(${p.user_id})" class="action-btn" style="padding: 0.2rem 0.6rem; font-size: 0.7rem;">VOTE</button>`;
                                 }
                             }
                         }
+
+                        li.appendChild(nameSpan);
                         
+                        const rightSide = document.createElement('div');
+                        rightSide.style.display = 'flex';
+                        rightSide.style.alignItems = 'center';
+                        rightSide.style.gap = '10px';
+
+                        if (actionHtml) {
+                            const actionSpan = document.createElement('span');
+                            actionSpan.innerHTML = actionHtml;
+                            rightSide.appendChild(actionSpan);
+                        }
+
                         const statusSpan = document.createElement('span');
                         if (p.is_alive) {
                             statusSpan.style.cssText = 'width: 8px; height: 8px; background: #00ff00; border-radius: 50%; box-shadow: 0 0 5px #00ff00;';
@@ -501,13 +508,14 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                             statusSpan.textContent = 'RIP';
                             statusSpan.style.cssText = 'font-size: 0.8rem; color: var(--red);';
                         }
+                        rightSide.appendChild(statusSpan);
                         
-                        li.appendChild(nameSpan);
-                        li.appendChild(statusSpan);
+                        li.appendChild(rightSide);
                         playersList.appendChild(li);
                     });
                 }
-            });
+            })
+            .catch(error => console.error('Error fetching players:', error));
     }
 
     chatForm.addEventListener('submit', function(e) {
@@ -533,12 +541,14 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
     });
 
     // Initial fetch and polling
-    updateGameUI();
-    fetchMessages();
-    fetchPlayers();
-    setInterval(updateGameUI, 3000);
-    setInterval(fetchMessages, 2000);
-    setInterval(fetchPlayers, 5000);
+    document.addEventListener('DOMContentLoaded', () => {
+        updateGameUI();
+        fetchMessages();
+        fetchPlayers();
+        setInterval(updateGameUI, 3000);
+        setInterval(fetchMessages, 2000);
+        setInterval(fetchPlayers, 5000);
+    });
 </script>
 
 <?php require_once "includes/footer.php"; ?>
