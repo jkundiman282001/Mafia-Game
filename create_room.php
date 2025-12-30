@@ -54,6 +54,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
                 }
                 
                 // Redirect to room page
+                session_write_close();
                 echo "<script>window.location.href='room.php?id=" . $new_room_id . "';</script>";
                 exit;
             } else{
@@ -63,8 +64,6 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
             mysqli_stmt_close($stmt);
         }
     }
-    
-    mysqli_close($link);
 }
 ?>
 

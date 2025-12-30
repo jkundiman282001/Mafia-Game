@@ -70,5 +70,18 @@ if(mysqli_query($link, $sql)){
     echo "ERROR: Could not execute $sql. " . mysqli_error($link) . "<br>";
 }
 
+// Create sessions table
+$sql = "CREATE TABLE IF NOT EXISTS sessions (
+    id VARCHAR(128) NOT NULL PRIMARY KEY,
+    data BLOB NOT NULL,
+    access INT(10) UNSIGNED NOT NULL
+)";
+
+if(mysqli_query($link, $sql)){
+    echo "Table 'sessions' created successfully or already exists.<br>";
+} else{
+    echo "ERROR: Could not execute $sql. " . mysqli_error($link) . "<br>";
+}
+
 mysqli_close($link);
 ?>

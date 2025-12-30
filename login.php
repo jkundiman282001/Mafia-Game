@@ -49,7 +49,8 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
                             $_SESSION["id"] = $id;
                             $_SESSION["username"] = $username;                            
                             
-                            // Redirect user to welcome page
+                            // Save session and redirect user to welcome page
+                            session_write_close();
                             echo "<script>window.location.href='index.php';</script>";
                         } else{
                             $password_err = "The password you entered was not valid.";
@@ -65,8 +66,6 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
             mysqli_stmt_close($stmt);
         }
     }
-    
-    mysqli_close($link);
 }
 ?>
 

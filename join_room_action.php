@@ -1,6 +1,5 @@
 <?php
-session_start();
-require_once "includes/config.php";
+require_once "includes/session.php";
 
 // Check if the user is logged in
 if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){
@@ -66,6 +65,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
                     
                     if(mysqli_stmt_num_rows($stmt_check) > 0){
                         // User already in room, just redirect
+                        session_write_close();
                         echo "<script>window.location.href='room.php?id=" . $room_id . "';</script>";
                         exit;
                     }
@@ -85,6 +85,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
                             mysqli_stmt_close($stmt_update);
                         }
                         
+                        session_write_close();
                         echo "<script>window.location.href='room.php?id=" . $room_id . "';</script>";
                         exit;
                     } else {
