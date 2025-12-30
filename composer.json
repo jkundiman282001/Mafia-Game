@@ -1,0 +1,8 @@
+{
+    "name": "mafia-game/mafia-game",
+    "description": "A Social Deduction Mafia Game",
+    "type": "project",
+    "require": {
+        "php": ">=7.4"
+    }
+}
