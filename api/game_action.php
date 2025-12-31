@@ -36,10 +36,12 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["room_id"]) && isset($_P
         if($action === 'kill' && $player['role'] === 'Killer' && $room['current_turn'] === 'Killer'){
             mysqli_query($link, "UPDATE rooms SET killer_target = $target_id, current_turn = 'Doctor' WHERE id = $room_id");
             echo json_encode(["status" => "success", "message" => "Target marked for elimination."]);
+            exit;
         } 
         elseif($action === 'save' && $player['role'] === 'Doctor' && $room['current_turn'] === 'Doctor'){
             mysqli_query($link, "UPDATE rooms SET doctor_target = $target_id, current_turn = 'Investigator' WHERE id = $room_id");
             echo json_encode(["status" => "success", "message" => "Target protected."]);
+            exit;
         }
         elseif($action === 'investigate' && $player['role'] === 'Investigator' && $room['current_turn'] === 'Investigator'){
             $sql_target = "SELECT role FROM room_players WHERE room_id = $room_id AND user_id = $target_id";
@@ -60,11 +62,13 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["room_id"]) && isset($_P
             
             mysqli_query($link, "UPDATE rooms SET phase = 'day', current_turn = 'None', phase_start_time = NOW(), killer_target = NULL, doctor_target = NULL WHERE id = $room_id");
             echo json_encode(["status" => "success", "message" => "Investigation complete: Target is $result.", "investigation_result" => $result]);
+            exit;
         }
     } 
     elseif($room['phase'] === 'day' && $action === 'trial' && $user_id == $room['creator_id']){
         mysqli_query($link, "UPDATE rooms SET phase = 'trial', current_turn = 'None' WHERE id = $room_id");
         echo json_encode(["status" => "success", "message" => "Trial phase started."]);
+        exit;
     }
     elseif($room['phase'] === 'trial' && $action === 'vote'){
         // Check if already voted
@@ -107,8 +111,10 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["room_id"]) && isset($_P
             }
             
             echo json_encode(["status" => "success", "message" => "Vote cast."]);
+            exit;
         } else {
             echo json_encode(["status" => "error", "message" => "You have already voted."]);
+            exit;
         }
     } 
     else {

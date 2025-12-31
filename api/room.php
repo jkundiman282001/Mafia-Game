@@ -268,9 +268,27 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                             let actionBtn = '';
                             if (isAlive && p.is_alive && p.id != currentUserId) {
                                 if (currentPhase === 'night' && userRole === currentTurn) {
-                                    const btnColor = userRole === 'Killer' ? 'var(--red)' : (userRole === 'Doctor' ? '#4caf50' : '#2196f3');
-                                    const btnLabel = userRole === 'Killer' ? 'Kill' : (userRole === 'Doctor' ? 'Save' : 'Check');
-                                    actionBtn = `<button onclick="performAction('${userRole.toLowerCase()}', ${p.id})" class="cta-button" style="padding: 5px 15px; font-size: 0.8rem; background: ${btnColor}; margin: 0;">${btnLabel}</button>`;
+                                    let actionName = '';
+                                    let btnColor = '';
+                                    let btnLabel = '';
+                                    
+                                    if (userRole === 'Killer') {
+                                        actionName = 'kill';
+                                        btnColor = 'var(--red)';
+                                        btnLabel = 'Kill';
+                                    } else if (userRole === 'Doctor') {
+                                        actionName = 'save';
+                                        btnColor = '#4caf50';
+                                        btnLabel = 'Save';
+                                    } else if (userRole === 'Investigator') {
+                                        actionName = 'investigate';
+                                        btnColor = '#2196f3';
+                                        btnLabel = 'Check';
+                                    }
+                                    
+                                    if (actionName) {
+                                        actionBtn = `<button onclick="performAction('${actionName}', ${p.id})" class="cta-button" style="padding: 5px 15px; font-size: 0.8rem; background: ${btnColor}; margin: 0;">${btnLabel}</button>`;
+                                    }
                                 } else if (currentPhase === 'trial') {
                                     actionBtn = `<button onclick="performAction('vote', ${p.id})" class="cta-button" style="padding: 5px 15px; font-size: 0.8rem; background: #795548; margin: 0;">Vote (${p.vote_count})</button>`;
                                 }
@@ -365,18 +383,30 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.status === 'success') {
                 if (data.investigation_result) {
                     investigationResult.style.display = 'block';
                     investigationResult.innerText = `Investigation Result: This player is ${data.investigation_result}`;
+                    // Also show in arena if needed
+                    arenaActionDesc.innerText = `Investigation Result: ${data.investigation_result}`;
                 }
                 actionPanel.style.display = 'none';
+                arenaActionPanel.style.display = 'none';
                 syncRoom(); // Refresh UI immediately
             } else {
                 alert(data.message);
             }
+        })
+        .catch(err => {
+            console.error('Action error:', err);
+            alert('An error occurred while performing the action. Please try again.');
         });
     }
 
