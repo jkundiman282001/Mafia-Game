@@ -34,12 +34,37 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["room_id"]) && isset($_P
     // 2. Handle Actions based on Phase and Turn
     if($room['phase'] === 'night'){
         if($action === 'kill' && $player['role'] === 'Killer' && $room['current_turn'] === 'Killer'){
-            mysqli_query($link, "UPDATE rooms SET killer_target = $target_id, current_turn = 'Doctor' WHERE id = $room_id");
+            // Update killer target
+            mysqli_query($link, "UPDATE rooms SET killer_target = $target_id WHERE id = $room_id");
+            
+            // Determine next turn: skip Doctor if dead
+            $res_doc = mysqli_query($link, "SELECT id FROM room_players WHERE room_id = $room_id AND role = 'Doctor' AND is_alive = 1");
+            if(mysqli_num_rows($res_doc) > 0) {
+                mysqli_query($link, "UPDATE rooms SET current_turn = 'Doctor' WHERE id = $room_id");
+            } else {
+                // Doctor is dead, check Investigator
+                $res_inv = mysqli_query($link, "SELECT id FROM room_players WHERE room_id = $room_id AND role = 'Investigator' AND is_alive = 1");
+                if(mysqli_num_rows($res_inv) > 0) {
+                    mysqli_query($link, "UPDATE rooms SET current_turn = 'Investigator' WHERE id = $room_id");
+                } else {
+                    // Both dead, end night phase
+                    end_night_phase($link, $room_id);
+                }
+            }
             echo json_encode(["status" => "success", "message" => "Target marked for elimination."]);
             exit;
         } 
         elseif($action === 'save' && $player['role'] === 'Doctor' && $room['current_turn'] === 'Doctor'){
-            mysqli_query($link, "UPDATE rooms SET doctor_target = $target_id, current_turn = 'Investigator' WHERE id = $room_id");
+            mysqli_query($link, "UPDATE rooms SET doctor_target = $target_id WHERE id = $room_id");
+            
+            // Determine next turn: skip Investigator if dead
+            $res_inv = mysqli_query($link, "SELECT id FROM room_players WHERE room_id = $room_id AND role = 'Investigator' AND is_alive = 1");
+            if(mysqli_num_rows($res_inv) > 0) {
+                mysqli_query($link, "UPDATE rooms SET current_turn = 'Investigator' WHERE id = $room_id");
+            } else {
+                // Investigator is dead, end night phase
+                end_night_phase($link, $room_id);
+            }
             echo json_encode(["status" => "success", "message" => "Target protected."]);
             exit;
         }
@@ -49,18 +74,9 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["room_id"]) && isset($_P
             $target = mysqli_fetch_assoc($res_target);
             $result = ($target['role'] === 'Killer') ? "Bad" : "Good";
             
-            // End Night Phase, Process Results
-            $killer_target = $room['killer_target'];
-            $doctor_target = $room['doctor_target'];
+            // End Night Phase
+            end_night_phase($link, $room_id);
             
-            if($killer_target && $killer_target != $doctor_target){
-                mysqli_query($link, "UPDATE room_players SET is_alive = 0 WHERE room_id = $room_id AND user_id = $killer_target");
-            }
-            
-            // Check for game end before moving to day
-            check_game_end($link, $room_id);
-            
-            mysqli_query($link, "UPDATE rooms SET phase = 'day', current_turn = 'None', phase_start_time = NOW(), killer_target = NULL, doctor_target = NULL WHERE id = $room_id");
             echo json_encode(["status" => "success", "message" => "Investigation complete: Target is $result.", "investigation_result" => $result]);
             exit;
         }
@@ -71,7 +87,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["room_id"]) && isset($_P
         exit;
     }
     elseif($room['phase'] === 'trial' && $action === 'vote'){
-        // Check if already voted
+        // ... (existing voting logic)
         $sql_voted = "SELECT voted_for FROM room_players WHERE room_id = $room_id AND user_id = $user_id";
         $res_voted = mysqli_query($link, $sql_voted);
         $voted = mysqli_fetch_assoc($res_voted);
@@ -122,6 +138,25 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["room_id"]) && isset($_P
     }
 } else {
     echo json_encode(["status" => "error", "message" => "Invalid request."]);
+}
+
+function end_night_phase($link, $room_id) {
+    // Process Results
+    $sql = "SELECT killer_target, doctor_target FROM rooms WHERE id = $room_id";
+    $res = mysqli_query($link, $sql);
+    $room = mysqli_fetch_assoc($res);
+    
+    $killer_target = $room['killer_target'];
+    $doctor_target = $room['doctor_target'];
+    
+    if($killer_target && $killer_target != $doctor_target){
+        mysqli_query($link, "UPDATE room_players SET is_alive = 0 WHERE room_id = $room_id AND user_id = $killer_target");
+    }
+    
+    // Check for game end before moving to day
+    check_game_end($link, $room_id);
+    
+    mysqli_query($link, "UPDATE rooms SET phase = 'day', current_turn = 'None', phase_start_time = NOW(), killer_target = NULL, doctor_target = NULL WHERE id = $room_id");
 }
 
 function check_game_end($link, $room_id) {
