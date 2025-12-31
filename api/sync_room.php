@@ -21,11 +21,26 @@ if(isset($_GET["room_id"])){
     ];
 
     // 1. Fetch Room Status
-    $sql_room = "SELECT status, current_players, max_players, creator_id FROM rooms WHERE id = $room_id";
+    $sql_room = "SELECT status, phase, round, current_turn, killer_target, doctor_target, winner, phase_start_time, NOW() as current_time, current_players, max_players, creator_id FROM rooms WHERE id = $room_id";
     $res_room = mysqli_query($link, $sql_room);
     if($res_room && $row = mysqli_fetch_assoc($res_room)){
+        $time_remaining = 0;
+        if($row['phase'] === 'day' && $row['phase_start_time']){
+            $start = strtotime($row['phase_start_time']);
+            $now = strtotime($row['current_time']);
+            $elapsed = $now - $start;
+            $time_remaining = max(0, 180 - $elapsed); // 3 minutes = 180s
+        }
+
         $response["room"] = [
             "status" => $row["status"],
+            "phase" => $row["phase"],
+            "round" => (int)$row["round"],
+            "current_turn" => $row["current_turn"],
+            "killer_target" => $row["killer_target"],
+            "doctor_target" => $row["doctor_target"],
+            "winner" => $row["winner"],
+            "time_remaining" => $time_remaining,
             "current_players" => $row["current_players"],
             "max_players" => $row["max_players"],
             "creator_id" => (int)$row["creator_id"],
@@ -33,11 +48,25 @@ if(isset($_GET["room_id"])){
         ];
     }
 
-    // 2. Fetch Players
-    $sql_players = "SELECT u.username FROM room_players rp JOIN users u ON rp.user_id = u.id WHERE rp.room_id = $room_id";
+    // 2. Fetch Players & Current User Role
+    $user_id = (int)$_SESSION["id"];
+    $sql_players = "SELECT u.username, rp.user_id, rp.role, rp.is_alive, rp.vote_count 
+                    FROM room_players rp 
+                    JOIN users u ON rp.user_id = u.id 
+                    WHERE rp.room_id = $room_id";
     $res_players = mysqli_query($link, $sql_players);
     while($player = mysqli_fetch_assoc($res_players)){
-        $response["players"][] = $player['username'];
+        $response["players"][] = [
+            "id" => (int)$player['user_id'],
+            "username" => $player['username'],
+            "is_alive" => (bool)$player['is_alive'],
+            "vote_count" => (int)$player['vote_count']
+        ];
+        
+        if((int)$player['user_id'] === $user_id){
+            $response["user_role"] = $player['role'];
+            $response["is_alive"] = (bool)$player['is_alive'];
+        }
     }
 
     // 3. Fetch New Messages (only since last_id)

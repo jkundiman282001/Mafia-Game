@@ -28,15 +28,43 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["room_id"])){
             exit;
         }
 
-        if($row['current_players'] < 2){
-            echo json_encode(["status" => "error", "message" => "Need at least 2 players to start the game."]);
+        if($row['current_players'] < 4){
+            echo json_encode(["status" => "error", "message" => "Need at least 4 players to assign all roles (Killer, Doctor, Investigator, Townsfolk)."]);
             exit;
         }
 
-        // Update room status
-        $update_sql = "UPDATE rooms SET status = 'in_progress' WHERE id = $room_id";
+        // Get all players in the room
+        $players = [];
+        $sql_players = "SELECT user_id FROM room_players WHERE room_id = $room_id";
+        $res_players = mysqli_query($link, $sql_players);
+        while($p = mysqli_fetch_assoc($res_players)){
+            $players[] = $p['user_id'];
+        }
+
+        // Shuffle and assign roles
+        shuffle($players);
+        
+        $killer = array_pop($players);
+        $doctor = array_pop($players);
+        $investigator = array_pop($players);
+        $townsfolk = $players; // Remaining players
+
+        // Update Killer
+        mysqli_query($link, "UPDATE room_players SET role = 'Killer' WHERE room_id = $room_id AND user_id = $killer");
+        // Update Doctor
+        mysqli_query($link, "UPDATE room_players SET role = 'Doctor' WHERE room_id = $room_id AND user_id = $doctor");
+        // Update Investigator
+        mysqli_query($link, "UPDATE room_players SET role = 'Investigator' WHERE room_id = $room_id AND user_id = $investigator");
+        // Update Townsfolk
+        if(!empty($townsfolk)){
+            $towns_ids = implode(',', $townsfolk);
+            mysqli_query($link, "UPDATE room_players SET role = 'Townsfolk' WHERE room_id = $room_id AND user_id IN ($towns_ids)");
+        }
+
+        // Update room status and phase
+        $update_sql = "UPDATE rooms SET status = 'in_progress', phase = 'night', round = 1, current_turn = 'Killer', phase_start_time = NOW() WHERE id = $room_id";
         if(mysqli_query($link, $update_sql)){
-            echo json_encode(["status" => "success", "message" => "Game started!"]);
+            echo json_encode(["status" => "success", "message" => "Game started! Night phase begins."]);
         } else {
             echo json_encode(["status" => "error", "message" => "Failed to start game: " . mysqli_error($link)]);
         }

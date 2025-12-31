@@ -13,14 +13,27 @@ CREATE TABLE IF NOT EXISTS rooms (
     max_players INT DEFAULT 10,
     current_players INT DEFAULT 0,
     status ENUM('waiting', 'in_progress', 'finished') DEFAULT 'waiting',
+    phase ENUM('lobby', 'night', 'day', 'trial') DEFAULT 'lobby',
+    round INT DEFAULT 0,
+    current_turn VARCHAR(20) DEFAULT 'None',
+    killer_target INT DEFAULT NULL,
+    doctor_target INT DEFAULT NULL,
+    phase_start_time DATETIME DEFAULT NULL,
+    winner VARCHAR(20) DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (creator_id) REFERENCES users(id)
+    FOREIGN KEY (creator_id) REFERENCES users(id),
+    FOREIGN KEY (killer_target) REFERENCES users(id),
+    FOREIGN KEY (doctor_target) REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS room_players (
     id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     room_id INT NOT NULL,
     user_id INT NOT NULL,
+    role ENUM('Townsfolk', 'Killer', 'Doctor', 'Investigator') DEFAULT 'Townsfolk',
+    is_alive TINYINT(1) DEFAULT 1,
+    vote_count INT DEFAULT 0,
+    voted_for INT DEFAULT NULL,
     joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (room_id) REFERENCES rooms(id),
     FOREIGN KEY (user_id) REFERENCES users(id),
