@@ -171,6 +171,11 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
             
             <div id="arena-timer" style="font-size: 3rem; font-weight: bold; margin: 20px 0; font-family: monospace; color: var(--white);">03:00</div>
             
+            <div id="arena-turn-status" style="margin-bottom: 20px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; border-left: 4px solid var(--red); display: none;">
+                <p style="color: var(--white-dark); margin-bottom: 5px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;">Current Action</p>
+                <h4 id="current-turn-display" style="color: var(--white); margin: 0; font-size: 1.2rem; font-family: 'Orbitron', sans-serif;">Waiting...</h4>
+            </div>
+
             <div id="arena-role-card" style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
                 <p style="color: var(--white-dark); margin-bottom: 5px;">YOUR ROLE</p>
                 <h3 id="user-role-display" style="color: #ffeb3b; margin: 0; font-size: 1.5rem;">...</h3>
@@ -262,6 +267,8 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
     const arenaChatForm = document.getElementById('arena-chat-form');
     const arenaMessageInput = document.getElementById('arena-message-input');
     const arenaInvestigationResult = document.getElementById('arena-investigation-result');
+    const arenaTurnStatus = document.getElementById('arena-turn-status');
+    const currentTurnDisplay = document.getElementById('current-turn-display');
 
     let lastMessageId = 0;
     let isAlive = true;
@@ -334,6 +341,7 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                                 phaseName.innerText = "☀️ DAY " + data.room.round;
                                 phaseName.parentElement.style.background = '#ef6c00';
                                 arenaTimer.style.display = 'block';
+                                arenaTurnStatus.style.display = 'none';
                                 
                                 const minutes = Math.floor(data.room.time_remaining / 60);
                                 const seconds = data.room.time_remaining % 60;
@@ -352,6 +360,25 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                                 arenaTimer.style.display = 'none';
                                 arenaTrialControl.style.display = 'none';
                                 
+                                // Show Turn Status for everyone
+                                arenaTurnStatus.style.display = 'block';
+                                if (currentTurn === 'Killer') {
+                                    currentTurnDisplay.innerText = "Killer is acting...";
+                                    currentTurnDisplay.style.color = 'var(--red)';
+                                } else if (currentTurn === 'Doctor') {
+                                    currentTurnDisplay.innerText = "Doctor is acting...";
+                                    currentTurnDisplay.style.color = '#4caf50';
+                                } else if (currentTurn === 'Investigator') {
+                                    currentTurnDisplay.innerText = "Investigator is acting...";
+                                    currentTurnDisplay.style.color = '#2196f3';
+                                } else if (currentTurn === 'Investigator_Result') {
+                                    currentTurnDisplay.innerText = "Investigator is reviewing...";
+                                    currentTurnDisplay.style.color = '#ffeb3b';
+                                } else {
+                                    currentTurnDisplay.innerText = "Waiting...";
+                                    currentTurnDisplay.style.color = 'var(--white)';
+                                }
+
                                 // Show Action Panel if it's user's turn
                                 if (isAlive && userRole === currentTurn) {
                                     arenaActionPanel.style.display = 'block';
@@ -373,6 +400,7 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                                 phaseName.innerText = "⚖️ TRIAL";
                                 phaseName.parentElement.style.background = '#795548';
                                 arenaTimer.style.display = 'none';
+                                arenaTurnStatus.style.display = 'none';
                                 arenaTrialControl.style.display = 'none';
                                 
                                 if (isAlive) {
