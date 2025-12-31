@@ -21,8 +21,6 @@ CREATE TABLE IF NOT EXISTS room_players (
     id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     room_id INT NOT NULL,
     user_id INT NOT NULL,
-    role VARCHAR(20) DEFAULT NULL,
-    is_alive BOOLEAN DEFAULT TRUE,
     joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (room_id) REFERENCES rooms(id),
     FOREIGN KEY (user_id) REFERENCES users(id),

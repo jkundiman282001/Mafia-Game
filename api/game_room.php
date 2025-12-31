@@ -9,40 +9,39 @@ if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){
 ?>
 
 <div class="container" style="padding-top: 100px; padding-bottom: 50px;">
-    <h2 class="section-title">Game Room</h2>
-    <p style="text-align: center; color: var(--white-dark); margin-bottom: 3rem;">Join a game or create your own room.</p>
+    <h2 class="section-title">Lobby</h2>
+    <p style="text-align: center; color: var(--white-dark); margin-bottom: 3rem;">Join a room or create your own to start chatting.</p>
     
     <div class="roles-grid">
         <!-- Public Room -->
         <div class="role-card">
-            <div class="role-icon" style="font-size: 3rem;">🎮</div>
+            <div class="role-icon" style="font-size: 3rem;">💬</div>
             <h3>Public Lobby</h3>
-            <p>Join players from around the world in a classic Mafia game.</p>
+            <p>Join public rooms and meet new people.</p>
             <div style="margin: 1rem 0;">
-                <span class="role-badge" style="background: var(--red);">Live</span>
-                <span style="color: var(--white-dark); font-size: 0.9rem; margin-left: 10px;">Waiting for players...</span>
+                <span class="role-badge" style="background: var(--red);">Open</span>
             </div>
-            <a href="join_lobby.php" class="cta-button" style="width: 100%; margin-top: 1rem; display: inline-block;">Join Lobby</a>
+            <a href="join_lobby.php" class="cta-button" style="width: 100%; margin-top: 1rem; display: inline-block;">Browse Rooms</a>
         </div>
 
         <!-- Create Room -->
         <div class="role-card">
-            <div class="role-icon" style="font-size: 3rem;">➕</div>
+            <div class="role-icon" style="font-size: 3rem;">🏠</div>
             <h3>Create Room</h3>
-            <p>Host a private game for you and your friends with custom rules.</p>
+            <p>Host your own room and invite your friends with a code.</p>
             <div style="margin: 1rem 0;">
-                <span class="role-badge" style="background: var(--white-dark); color: var(--black);">Custom</span>
+                <span class="role-badge" style="background: var(--white-dark); color: var(--black);">Private</span>
             </div>
             <a href="create_room.php" class="cta-button" style="width: 100%; margin-top: 1rem; background: transparent; border: 1px solid var(--red); display: inline-block;">Create New</a>
         </div>
 
         <!-- Ranked Room -->
         <div class="role-card">
-            <div class="role-icon" style="font-size: 3rem;">🏆</div>
-            <h3>Ranked Match</h3>
-            <p>Compete against skilled players and climb the leaderboard.</p>
+            <div class="role-icon" style="font-size: 3rem;">⚡</div>
+            <h3>Quick Join</h3>
+            <p>Instantly jump into a random active room.</p>
             <div style="margin: 1rem 0;">
-                <span class="role-badge" style="background: gold; color: black;">Competitive</span>
+                <span class="role-badge" style="background: var(--red); color: white;">Fast</span>
             </div>
             <button class="cta-button" style="width: 100%; margin-top: 1rem; opacity: 0.5; cursor: not-allowed;">Coming Soon</button>
         </div>

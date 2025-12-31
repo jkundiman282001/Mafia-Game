@@ -24,12 +24,10 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
         $max_players = $row["max_players"];
         $status = $row["status"];
     } else{
-        // URL doesn't contain valid id. Redirect to game room page
         echo "<script>window.location.href='game_room.php';</script>";
         exit;
     }
 } else{
-    // URL doesn't contain id parameter. Redirect to game room page
     echo "<script>window.location.href='game_room.php';</script>";
     exit;
 }
@@ -45,20 +43,17 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
             </div>
         </div>
         <div style="display: inline-block; padding: 0.5rem 1.5rem; background: var(--black-light); border: 1px solid var(--red); border-radius: 20px;">
-            <span style="color: var(--white-dark);">Status: </span>
-            <span style="color: var(--red); font-weight: bold; text-transform: uppercase;"><?php echo $status; ?></span>
-            <span style="margin: 0 10px; color: var(--white-dark);">|</span>
             <span style="color: var(--white-dark);">Players: </span>
-            <span style="color: var(--white); font-weight: bold;"><?php echo $current_players; ?> / <?php echo $max_players; ?></span>
+            <span id="player-count" style="color: var(--white); font-weight: bold;"><?php echo $current_players; ?> / <?php echo $max_players; ?></span>
         </div>
     </div>
 
     <div class="room-container" style="display: flex; gap: 2rem; align-items: flex-start;">
         <!-- Left Side: Chat Room -->
         <div class="role-card chat-section" style="flex: 2; height: 500px; display: flex; flex-direction: column; text-align: left; min-width: 0;">
-            <h3 style="border-bottom: 1px solid var(--red); padding-bottom: 1rem; margin-bottom: 1rem;">Chat Room</h3>
+            <h3 style="border-bottom: 1px solid var(--red); padding-bottom: 1rem; margin-bottom: 1rem;">Room Chat</h3>
             <div id="chat-box" style="flex-grow: 1; overflow-y: auto; padding: 1rem; background: rgba(0,0,0,0.3); border-radius: 10px; margin-bottom: 1rem;">
-                <p style="color: var(--white-dark); font-style: italic;">Welcome to the room! Loading messages...</p>
+                <p style="color: var(--white-dark); font-style: italic;">Loading messages...</p>
             </div>
             <form id="chat-form" style="display: flex; gap: 10px;">
                 <input type="hidden" id="room_id" value="<?php echo $room_id; ?>">
@@ -67,160 +62,95 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
             </form>
         </div>
 
-        <script>
-            const chatBox = document.getElementById('chat-box');
-            const chatForm = document.getElementById('chat-form');
-            const messageInput = document.getElementById('message-input');
-            const roomId = document.getElementById('room_id').value;
-
-            function fetchMessages() {
-                fetch(`get_messages.php?room_id=${roomId}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'success') {
-                            const isScrolledToBottom = chatBox.scrollHeight - chatBox.clientHeight <= chatBox.scrollTop + 1;
-                            
-                            chatBox.innerHTML = '';
-                            if (data.messages.length === 0) {
-                                chatBox.innerHTML = '<p style="color: var(--white-dark); font-style: italic;">No messages yet. Start the conversation!</p>';
-                            } else {
-                                data.messages.forEach(msg => {
-                                    const msgDiv = document.createElement('div');
-                                    msgDiv.style.marginBottom = '0.5rem';
-                                    msgDiv.innerHTML = `<strong style="color: var(--red);">${msg.username}:</strong> <span style="color: var(--white);">${msg.message}</span>`;
-                                    chatBox.appendChild(msgDiv);
-                                });
-                            }
-                            
-                            if (isScrolledToBottom) {
-                                chatBox.scrollTop = chatBox.scrollHeight;
-                            }
-                        }
-                    });
-            }
-
-            chatForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                const message = messageInput.value.trim();
-                if (!message) return;
-
-                const formData = new FormData();
-                formData.append('room_id', roomId);
-                formData.append('message', message);
-
-                fetch('send_message.php', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok: ' + response.statusText);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.status === 'success') {
-                        messageInput.value = '';
-                        fetchMessages();
-                    } else {
-                        alert('Error: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Fetch error:', error);
-                    alert('Failed to send message. See console for details.');
-                });
-            });
-
-            // Initial fetch and poll every 2 seconds
-            fetchMessages();
-            setInterval(fetchMessages, 2000);
-
-            // Poll for game status
-            function checkGameStatus() {
-                fetch(`get_room_status.php?room_id=${roomId}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'success' && data.room_status === 'in_progress') {
-                            window.location.href = `arena.php?id=${roomId}`;
-                        }
-                    });
-            }
-            setInterval(checkGameStatus, 3000);
-        </script>
-
-        <!-- Player List -->
-        <div class="role-card sidebar" style="flex: 1; text-align: left; min-width: 300px;">
+        <!-- Right Side: Player List -->
+        <div class="role-card" style="flex: 1; min-width: 250px; text-align: left;">
             <h3 style="border-bottom: 1px solid var(--red); padding-bottom: 1rem; margin-bottom: 1rem;">Players</h3>
-            <ul style="list-style: none; padding: 0;">
-                <?php
-                // Fetch players in the room
-                $sql_players = "SELECT u.username, u.id, r.creator_id 
-                                FROM room_players rp 
-                                JOIN users u ON rp.user_id = u.id 
-                                JOIN rooms r ON rp.room_id = r.id 
-                                WHERE rp.room_id = $room_id";
-                $result_players = mysqli_query($link, $sql_players);
-                
-                if($result_players){
-                    while($player = mysqli_fetch_assoc($result_players)){
-                        $is_creator = ($player['id'] == $player['creator_id']);
-                        $is_me = ($player['id'] == $_SESSION['id']);
-                        
-                        echo '<li style="padding: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--white);">';
-                        echo htmlspecialchars($player['username']);
-                        if($is_me) echo ' (You)';
-                        if($is_creator) echo '<span style="float: right; color: gold;">👑</span>';
-                        echo '</li>';
-                    }
-                }
-                ?>
-                <?php if($current_players < $max_players): ?>
-                    <li style="padding: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--white-dark); font-style: italic;">
-                        Waiting for players...
-                    </li>
-                <?php endif; ?>
-            </ul>
-            
-            <?php 
-            // If game is in progress, show your role
-            if($status == 'in_progress'):
-                $user_id = (int)$_SESSION['id'];
-                $sql_role = "SELECT role FROM room_players WHERE room_id = $room_id AND user_id = $user_id";
-                $res_r = mysqli_query($link, $sql_role);
-                if($res_r){
-                    $role_data = mysqli_fetch_assoc($res_r);
-                    $my_role = $role_data ? $role_data['role'] : 'Unknown';
-                    ?>
-                    <div style="margin-top: 2rem; padding: 1rem; background: rgba(255,0,0,0.1); border: 1px solid var(--red); border-radius: 10px; text-align: center;">
-                        <h4 style="color: var(--white-dark); margin-bottom: 0.5rem;">YOUR ROLE</h4>
-                        <div style="font-size: 1.5rem; color: var(--red); font-weight: bold; font-family: 'Orbitron', sans-serif;"><?php echo strtoupper($my_role); ?></div>
-                    </div>
-                    <?php
-                }
-            endif;
-            ?>
-            
-            <?php if($row['creator_id'] == $_SESSION['id'] && $status == 'waiting'): ?>
-                <div style="margin-top: 2rem; text-align: center;">
-                    <?php 
-                    $min_players = 4; // Set a minimum number of players to start the game
-                    $can_start = ($current_players >= $min_players);
-                    ?>
-                    <form action="start_game_action.php" method="post">
-                        <input type="hidden" name="room_id" value="<?php echo $room_id; ?>">
-                        <button type="submit" class="cta-button" style="width: 100%; font-size: 1rem; <?php echo !$can_start ? 'opacity: 0.5; cursor: not-allowed;' : ''; ?>" <?php echo !$can_start ? 'disabled' : ''; ?>>
-                            <?php echo $can_start ? 'Start Game' : 'Need ' . ($min_players - $current_players) . ' More Players'; ?>
-                        </button>
-                    </form>
-                </div>
-            <?php endif; ?>
-            
-            <div style="margin-top: 1rem; text-align: center;">
-                <a href="game_room.php" style="color: var(--white-dark); text-decoration: none; font-size: 0.9rem;">Leave Room</a>
+            <div id="player-list" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- Players will be loaded here -->
+                <p style="color: var(--white-dark);">Loading players...</p>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    const chatBox = document.getElementById('chat-box');
+    const chatForm = document.getElementById('chat-form');
+    const messageInput = document.getElementById('message-input');
+    const roomId = document.getElementById('room_id').value;
+    const playerList = document.getElementById('player-list');
+    const playerCount = document.getElementById('player-count');
+
+    function fetchMessages() {
+        fetch(`get_messages.php?room_id=${roomId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const isScrolledToBottom = chatBox.scrollHeight - chatBox.clientHeight <= chatBox.scrollTop + 1;
+                    chatBox.innerHTML = '';
+                    if (data.messages.length === 0) {
+                        chatBox.innerHTML = '<p style="color: var(--white-dark); font-style: italic;">No messages yet.</p>';
+                    } else {
+                        data.messages.forEach(msg => {
+                            const msgDiv = document.createElement('div');
+                            msgDiv.style.marginBottom = '0.5rem';
+                            msgDiv.innerHTML = `<strong style="color: var(--red);">${msg.username}:</strong> <span style="color: var(--white);">${msg.message}</span>`;
+                            chatBox.appendChild(msgDiv);
+                        });
+                    }
+                    if (isScrolledToBottom) {
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    }
+                }
+            });
+    }
+
+    function fetchRoomStatus() {
+        fetch(`get_room_status.php?room_id=${roomId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    playerCount.innerText = `${data.current_players} / ${data.max_players}`;
+                    playerList.innerHTML = '';
+                    data.players.forEach(username => {
+                        const p = document.createElement('div');
+                        p.style.padding = '10px';
+                        p.style.background = 'rgba(255,255,255,0.05)';
+                        p.style.borderRadius = '5px';
+                        p.style.color = 'var(--white)';
+                        p.innerText = username;
+                        playerList.appendChild(p);
+                    });
+                }
+            });
+    }
+
+    chatForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const message = messageInput.value.trim();
+        if (message) {
+            const formData = new FormData();
+            formData.append('room_id', roomId);
+            formData.append('message', message);
+
+            fetch('send_message.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    messageInput.value = '';
+                    fetchMessages();
+                }
+            });
+        }
+    });
+
+    setInterval(fetchMessages, 2000);
+    setInterval(fetchRoomStatus, 3000);
+    fetchMessages();
+    fetchRoomStatus();
+</script>
 
 <?php require_once "includes/footer.php"; ?>
