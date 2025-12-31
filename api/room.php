@@ -49,7 +49,6 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
         border: 2px solid transparent;
         border-radius: 4px;
         cursor: pointer;
-        transition: all 0.3s;
         font-family: 'Orbitron', sans-serif;
         color: white;
         margin: 0;
@@ -60,53 +59,45 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
     .action-btn-kill {
         background: rgba(255, 0, 64, 0.2);
         border-color: var(--red);
-        box-shadow: 0 0 10px rgba(255, 0, 64, 0.3);
     }
 
     .action-btn-kill:hover {
         background: var(--red);
         color: black;
-        box-shadow: 0 0 20px var(--red);
     }
 
     .action-btn-save {
         background: rgba(76, 175, 80, 0.2);
         border-color: #4caf50;
-        box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
     }
 
     .action-btn-save:hover {
         background: #4caf50;
         color: black;
-        box-shadow: 0 0 20px #4caf50;
     }
 
     .action-btn-investigate {
         background: rgba(33, 150, 243, 0.2);
         border-color: #2196f3;
-        box-shadow: 0 0 10px rgba(33, 150, 243, 0.3);
     }
 
     .action-btn-investigate:hover {
         background: #2196f3;
         color: black;
-        box-shadow: 0 0 20px #2196f3;
     }
 
     .action-btn-vote {
         background: rgba(121, 85, 72, 0.2);
         border-color: #795548;
-        box-shadow: 0 0 10px rgba(121, 85, 72, 0.3);
     }
 
     .action-btn-vote:hover {
         background: #795548;
         color: white;
-        box-shadow: 0 0 20px #795548;
     }
     
     .player-row {
-        transition: all 0.2s ease;
+        /* No transitions */
     }
     
     .player-row:hover {
