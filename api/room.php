@@ -188,55 +188,65 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                         }
 
                         if (data.room.status === 'in_progress') {
-                            gameNotification.style.display = 'block';
+                            // Hide lobby elements
+                            gameNotification.style.display = 'none'; 
                             creatorControls.style.display = 'none';
+                            actionPanel.style.display = 'none';
+                            trialControl.style.display = 'none';
                             
-                            // Timer for Day Phase
-                            if (data.room.phase === 'day') {
-                                timerDisplay.style.display = 'block';
-                                const minutes = Math.floor(data.room.time_remaining / 60);
-                                const seconds = data.room.time_remaining % 60;
-                                timeLeft.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                                phaseText.innerText = "☀️ Day Phase - Round " + data.room.round;
-                                gameNotification.style.background = '#ef6c00';
-                                
-                                // Creator Trial Button
-                                if (data.room.creator_id === data.room.current_user_id) {
-                                    trialControl.style.display = 'block';
-                                }
-                            } else {
-                                timerDisplay.style.display = 'none';
-                                trialControl.style.display = 'none';
+                            // Show Arena Sidebar
+                            arenaSidebar.style.display = 'flex';
+                            if (data.user_role) {
+                                userRoleDisplay.innerText = data.user_role + (isAlive ? "" : " (DEAD)");
+                                userRoleDisplay.style.color = isAlive ? '#ffeb3b' : '#666';
                             }
 
-                            if (data.room.phase === 'night') {
-                                phaseText.innerText = "🌙 Night Phase - Round " + data.room.round;
-                                gameNotification.style.background = '#1a237e';
+                            // Update Phase and Timer in Arena
+                            if (data.room.phase === 'day') {
+                                phaseName.innerText = "☀️ DAY " + data.room.round;
+                                phaseName.parentElement.style.background = '#ef6c00';
+                                arenaTimer.style.display = 'block';
+                                
+                                const minutes = Math.floor(data.room.time_remaining / 60);
+                                const seconds = data.room.time_remaining % 60;
+                                arenaTimer.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                                
+                                // Show Trial Button for Creator
+                                if (data.room.creator_id === data.room.current_user_id) {
+                                    arenaTrialControl.style.display = 'block';
+                                } else {
+                                    arenaTrialControl.style.display = 'none';
+                                }
+                                arenaActionPanel.style.display = 'none';
+                            } else if (data.room.phase === 'night') {
+                                phaseName.innerText = "🌙 NIGHT " + data.room.round;
+                                phaseName.parentElement.style.background = '#1a237e';
+                                arenaTimer.style.display = 'none';
+                                arenaTrialControl.style.display = 'none';
                                 
                                 // Show Action Panel if it's user's turn
                                 if (isAlive && userRole === currentTurn) {
-                                    actionPanel.style.display = 'block';
-                                    actionTitle.innerText = "It's your turn, " + userRole + "!";
-                                    if (userRole === 'Killer') actionDesc.innerText = "Choose a player to eliminate.";
-                                    if (userRole === 'Doctor') actionDesc.innerText = "Choose a player to protect.";
-                                    if (userRole === 'Investigator') actionDesc.innerText = "Choose a player to investigate.";
+                                    arenaActionPanel.style.display = 'block';
+                                    arenaActionTitle.innerText = "YOUR TURN";
+                                    if (userRole === 'Killer') arenaActionDesc.innerText = "Eliminate someone.";
+                                    if (userRole === 'Doctor') arenaActionDesc.innerText = "Protect someone.";
+                                    if (userRole === 'Investigator') arenaActionDesc.innerText = "Investigate someone.";
                                 } else {
-                                    actionPanel.style.display = 'none';
+                                    arenaActionPanel.style.display = 'none';
                                 }
                             } else if (data.room.phase === 'trial') {
-                                phaseText.innerText = "⚖️ Trial Phase";
-                                gameNotification.style.background = '#795548';
+                                phaseName.innerText = "⚖️ TRIAL";
+                                phaseName.parentElement.style.background = '#795548';
+                                arenaTimer.style.display = 'none';
+                                arenaTrialControl.style.display = 'none';
+                                
                                 if (isAlive) {
-                                    actionPanel.style.display = 'block';
-                                    actionTitle.innerText = "VOTING TIME!";
-                                    actionDesc.innerText = "Select someone to lynch.";
+                                    arenaActionPanel.style.display = 'block';
+                                    arenaActionTitle.innerText = "VOTING TIME";
+                                    arenaActionDesc.innerText = "Cast your vote.";
+                                } else {
+                                    arenaActionPanel.style.display = 'none';
                                 }
-                            } else {
-                                actionPanel.style.display = 'none';
-                            }
-
-                            if (data.user_role) {
-                                roleText.innerText = data.user_role + (isAlive ? "" : " (DEAD)");
                             }
                         }
                     }
@@ -371,6 +381,14 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
     }
 
     trialBtn.addEventListener('click', () => {
+        proceedToTrial();
+    });
+
+    arenaTrialBtn.addEventListener('click', () => {
+        proceedToTrial();
+    });
+
+    function proceedToTrial() {
         const formData = new FormData();
         formData.append('room_id', roomId);
         formData.append('action', 'trial');
@@ -383,10 +401,11 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
         .then(data => {
             if (data.status === 'success') {
                 trialControl.style.display = 'none';
+                arenaTrialControl.style.display = 'none';
                 syncRoom();
             }
         });
-    });
+    }
 
     // Start syncing every 2 seconds
     setInterval(syncRoom, 2000);

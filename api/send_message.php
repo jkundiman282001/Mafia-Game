@@ -28,4 +28,6 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     } else {
         echo json_encode(["status" => "error", "message" => "Message cannot be empty."]);
     }
+} else {
+    echo json_encode(["status" => "error", "message" => "Invalid request."]);
 }

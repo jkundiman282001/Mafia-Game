@@ -110,7 +110,12 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["room_id"]) && isset($_P
         } else {
             echo json_encode(["status" => "error", "message" => "You have already voted."]);
         }
+    } 
+    else {
+        echo json_encode(["status" => "error", "message" => "Invalid action or phase."]);
     }
+} else {
+    echo json_encode(["status" => "error", "message" => "Invalid request."]);
 }
 
 function check_game_end($link, $room_id) {
