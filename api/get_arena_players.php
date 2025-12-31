@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . "/includes/config.php";
-session_start();
+require_once __DIR__ . "/includes/session.php";
 
 ini_set('display_errors', 0);
 error_reporting(E_ALL);

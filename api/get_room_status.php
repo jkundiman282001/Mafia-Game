@@ -5,7 +5,7 @@ error_reporting(E_ALL);
 
 require_once __DIR__ . "/includes/config.php";
 // Skip session for a moment to debug 500 error
-session_start(); 
+require_once __DIR__ . "/includes/session.php"; 
 
 header('Content-Type: application/json');
 

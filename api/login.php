@@ -38,11 +38,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
                 $hashed_password = $row['password'];
                 
                 if(password_verify($password, $hashed_password)){
-                    // Password is correct, so start a new session
-                    if(session_status() === PHP_SESSION_NONE){
-                        session_start();
-                    }
-                    
+                    // Password is correct, so data is already in session
                     // Store data in session variables
                     $_SESSION["loggedin"] = true;
                     $_SESSION["id"] = $id;

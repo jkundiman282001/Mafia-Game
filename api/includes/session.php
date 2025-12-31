@@ -53,17 +53,18 @@ class DBSessionHandler implements SessionHandlerInterface {
     }
 }
 
-/*
 if($link){
     $handler = new DBSessionHandler($link);
     session_set_save_handler($handler, true);
     try {
-        session_start();
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
     } catch (Exception $e) {
         // Fallback or ignore
     }
 } else {
-    session_start(); // Fallback to default handler if DB link is missing
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 }
-*/
-session_start(); // Use default session handler for now to debug 500 error
