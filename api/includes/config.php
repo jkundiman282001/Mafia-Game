@@ -3,7 +3,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-/* Database credentials. Assuming you are running MySQL
+/* Database credentials. Assuming you are running MySQL */
 
 // Use Environment Variables (Railway defaults or custom), fallback to local defaults
 $db_server = getenv('MYSQLHOST') ?: getenv('DB_SERVER') ?: 'switchyard.proxy.rlwy.net';
