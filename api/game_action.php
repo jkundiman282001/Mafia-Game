@@ -1,7 +1,9 @@
 <?php
+ob_start();
 require_once __DIR__ . "/includes/config.php";
 require_once __DIR__ . "/includes/session.php";
 
+ob_clean();
 header('Content-Type: application/json');
 
 if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){

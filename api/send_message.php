@@ -1,10 +1,9 @@
 <?php
+ob_start();
 require_once __DIR__ . "/includes/session.php";
 require_once __DIR__ . "/includes/config.php";
 
-ini_set('display_errors', 0);
-error_reporting(E_ALL);
-
+ob_clean();
 header('Content-Type: application/json');
 
 // Check if user is logged in

@@ -145,7 +145,19 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
 
     function syncRoom() {
         fetch(`sync_room.php?room_id=${roomId}&last_id=${lastMessageId}`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.text().then(text => {
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        console.error('Failed to parse JSON:', text);
+                        throw new Error('Invalid JSON response');
+                    }
+                });
+            })
             .then(data => {
                 if (data.status === 'success') {
                     isAlive = data.is_alive;

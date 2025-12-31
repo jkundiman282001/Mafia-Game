@@ -1,7 +1,19 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+// Only display errors if not in an API call or if explicitly requested
+if (strpos($_SERVER['REQUEST_URI'], '/api/') === false && !isset($_GET['debug'])) {
+    ini_set('display_errors', 0);
+    ini_set('display_startup_errors', 0);
+    error_reporting(0);
+} else if (isset($_GET['debug'])) {
+    ini_set('display_errors', 1);
+    ini_set('display_startup_errors', 1);
+    error_reporting(E_ALL);
+} else {
+    // Default for API: no display, but log them
+    ini_set('display_errors', 0);
+    ini_set('display_startup_errors', 0);
+    error_reporting(E_ALL); // Log all, but don't display
+}
 
 /* Database credentials. Assuming you are running MySQL */
 
