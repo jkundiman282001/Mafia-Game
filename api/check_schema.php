@@ -3,13 +3,13 @@ require_once "includes/config.php";
 $result = mysqli_query($link, "SHOW COLUMNS FROM rooms");
 $rooms_columns = [];
 while($row = mysqli_fetch_assoc($result)){
-    $rooms_columns[] = $row['Field'];
+    $rooms_columns[] = $row;
 }
 
 $result2 = mysqli_query($link, "SHOW COLUMNS FROM room_players");
 $players_columns = [];
 while($row = mysqli_fetch_assoc($result2)){
-    $players_columns[] = $row['Field'];
+    $players_columns[] = $row;
 }
 
 header('Content-Type: application/json');

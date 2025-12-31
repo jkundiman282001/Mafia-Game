@@ -53,7 +53,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["room_id"]) && isset($_P
             $killer_target = $room['killer_target'];
             $doctor_target = $room['doctor_target'];
             
-            if($killer_target != $doctor_target){
+            if($killer_target && $killer_target != $doctor_target){
                 mysqli_query($link, "UPDATE room_players SET is_alive = 0 WHERE room_id = $room_id AND user_id = $killer_target");
             }
             
