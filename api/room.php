@@ -32,7 +32,87 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
     exit;
 }
 ?>
+<style>
+    .player-action-container {
+        min-width: 120px;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+    }
 
+    .action-btn {
+        padding: 8px 16px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border: 2px solid transparent;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-family: 'Orbitron', sans-serif;
+        color: white;
+        margin: 0;
+        width: 100px;
+        text-align: center;
+    }
+
+    .action-btn-kill {
+        background: rgba(255, 0, 64, 0.2);
+        border-color: var(--red);
+        box-shadow: 0 0 10px rgba(255, 0, 64, 0.3);
+    }
+
+    .action-btn-kill:hover {
+        background: var(--red);
+        color: black;
+        box-shadow: 0 0 20px var(--red);
+    }
+
+    .action-btn-save {
+        background: rgba(76, 175, 80, 0.2);
+        border-color: #4caf50;
+        box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+    }
+
+    .action-btn-save:hover {
+        background: #4caf50;
+        color: black;
+        box-shadow: 0 0 20px #4caf50;
+    }
+
+    .action-btn-investigate {
+        background: rgba(33, 150, 243, 0.2);
+        border-color: #2196f3;
+        box-shadow: 0 0 10px rgba(33, 150, 243, 0.3);
+    }
+
+    .action-btn-investigate:hover {
+        background: #2196f3;
+        color: black;
+        box-shadow: 0 0 20px #2196f3;
+    }
+
+    .action-btn-vote {
+        background: rgba(121, 85, 72, 0.2);
+        border-color: #795548;
+        box-shadow: 0 0 10px rgba(121, 85, 72, 0.3);
+    }
+
+    .action-btn-vote:hover {
+        background: #795548;
+        color: white;
+        box-shadow: 0 0 20px #795548;
+    }
+    
+    .player-row {
+        transition: all 0.2s ease;
+    }
+    
+    .player-row:hover {
+        background: rgba(255,255,255,0.1) !important;
+    }
+</style>
 <!-- Lobby Container -->
 <div id="lobby-container" class="container" style="padding-top: 100px; padding-bottom: 50px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
@@ -327,39 +407,42 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                             if (isAlive && p.is_alive && p.id != currentUserId) {
                                 if (currentPhase === 'night' && userRole === currentTurn) {
                                     let actionName = '';
-                                    let btnColor = '';
+                                    let btnClass = '';
                                     let btnLabel = '';
                                     
                                     if (userRole === 'Killer') {
                                         actionName = 'kill';
-                                        btnColor = 'var(--red)';
+                                        btnClass = 'action-btn-kill';
                                         btnLabel = 'Kill';
                                     } else if (userRole === 'Doctor') {
                                         actionName = 'save';
-                                        btnColor = '#4caf50';
+                                        btnClass = 'action-btn-save';
                                         btnLabel = 'Save';
                                     } else if (userRole === 'Investigator') {
                                         actionName = 'investigate';
-                                        btnColor = '#2196f3';
+                                        btnClass = 'action-btn-investigate';
                                         btnLabel = 'Check';
                                     }
                                     
                                     if (actionName) {
-                                        actionBtn = `<button onclick="performAction('${actionName}', ${p.id})" class="cta-button" style="padding: 5px 15px; font-size: 0.8rem; background: ${btnColor}; margin: 0;">${btnLabel}</button>`;
+                                        actionBtn = `<button onclick="performAction('${actionName}', ${p.id})" class="action-btn ${btnClass}">${btnLabel}</button>`;
                                     }
                                 } else if (currentPhase === 'trial') {
-                                    actionBtn = `<button onclick="performAction('vote', ${p.id})" class="cta-button" style="padding: 5px 15px; font-size: 0.8rem; background: #795548; margin: 0;">Vote (${p.vote_count})</button>`;
+                                    actionBtn = `<button onclick="performAction('vote', ${p.id})" class="action-btn action-btn-vote">Vote (${p.vote_count})</button>`;
                                 }
                             }
 
                             const pContent = `
-                                <div>
-                                    <span style="color: ${p.is_alive ? 'white' : '#666'}">${p.username}</span>
-                                    ${!p.is_alive ? '<span style="color: var(--red); font-size: 0.7rem; margin-left: 5px;">DEAD</span>' : ''}
+                                <div style="flex: 1; display: flex; align-items: center; gap: 10px; overflow: hidden;">
+                                    <span style="color: ${p.is_alive ? 'white' : '#666'}; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.username}</span>
+                                    ${!p.is_alive ? '<span style="color: var(--red); font-size: 0.7rem; font-weight: bold; background: rgba(255,0,0,0.1); padding: 2px 6px; border-radius: 3px; border: 1px solid var(--red);">DEAD</span>' : ''}
                                 </div>
-                                ${actionBtn}
+                                <div class="player-action-container">
+                                    ${actionBtn}
+                                </div>
                             `;
                             
+                            pDiv.className = 'player-row';
                             pDiv.innerHTML = pContent;
                             playerList.appendChild(pDiv);
                             
