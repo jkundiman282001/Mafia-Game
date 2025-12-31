@@ -166,6 +166,15 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                             return;
                         }
 
+                        if (data.room.status === 'waiting') {
+                            gameNotification.style.display = 'none';
+                            if (data.room.creator_id === data.room.current_user_id) {
+                                creatorControls.style.display = 'block';
+                            } else {
+                                creatorControls.style.display = 'none';
+                            }
+                        }
+
                         if (data.room.status === 'in_progress') {
                             gameNotification.style.display = 'block';
                             creatorControls.style.display = 'none';
@@ -223,6 +232,7 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                     // Update Player List with Action Buttons
                     if (data.players) {
                         playerList.innerHTML = '';
+                        const currentUserId = data.room ? data.room.current_user_id : null;
                         data.players.forEach(p => {
                             const pDiv = document.createElement('div');
                             pDiv.style.padding = '10px';
@@ -234,7 +244,7 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                             pDiv.style.alignItems = 'center';
                             
                             let actionBtn = '';
-                            if (isAlive && p.is_alive && p.id != data.room.current_user_id) {
+                            if (isAlive && p.is_alive && p.id != currentUserId) {
                                 if (currentPhase === 'night' && userRole === currentTurn) {
                                     const btnColor = userRole === 'Killer' ? 'var(--red)' : (userRole === 'Doctor' ? '#4caf50' : '#2196f3');
                                     const btnLabel = userRole === 'Killer' ? 'Kill' : (userRole === 'Doctor' ? 'Save' : 'Check');

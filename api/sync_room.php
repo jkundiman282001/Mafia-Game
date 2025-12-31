@@ -1,4 +1,5 @@
 <?php
+error_reporting(0);
 require_once __DIR__ . "/includes/config.php";
 require_once __DIR__ . "/includes/session.php";
 
