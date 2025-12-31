@@ -12,7 +12,7 @@ if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){
 if(isset($_GET["room_id"])){
     $room_id = (int)$_GET["room_id"];
     
-    $sql = "SELECT status, current_players, max_players FROM rooms WHERE id = $room_id";
+    $sql = "SELECT status, current_players, max_players, creator_id FROM rooms WHERE id = $room_id";
     $res_room = mysqli_query($link, $sql);
     
     if($res_room && $row = mysqli_fetch_assoc($res_room)){
@@ -29,6 +29,8 @@ if(isset($_GET["room_id"])){
             "room_status" => $row["status"],
             "current_players" => $row["current_players"],
             "max_players" => $row["max_players"],
+            "creator_id" => (int)$row["creator_id"],
+            "current_user_id" => (int)$_SESSION["id"],
             "players" => $players
         ]);
     } else {

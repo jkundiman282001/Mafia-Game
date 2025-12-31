@@ -48,6 +48,18 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
         </div>
     </div>
 
+    <!-- Start Game Button for Creator -->
+    <div id="creator-controls" style="display: none; margin-bottom: 2rem; text-align: center; padding: 1.5rem; background: rgba(255, 255, 255, 0.05); border-radius: 10px; border: 1px dashed var(--red);">
+        <p style="color: var(--white-dark); margin-bottom: 1rem;">You are the room creator. When enough players have joined, you can start the game.</p>
+        <button id="start-game-btn" class="cta-button" style="min-width: 200px;">Start Game</button>
+        <p id="start-error" style="color: var(--red); margin-top: 10px; font-size: 0.9rem; display: none;"></p>
+    </div>
+
+    <!-- Game Started Notification -->
+    <div id="game-status-notification" style="display: none; margin-bottom: 2rem; text-align: center; padding: 1rem; background: var(--red); color: white; border-radius: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">
+        The Game has Started!
+    </div>
+
     <div class="room-container" style="display: flex; gap: 2rem; align-items: flex-start;">
         <!-- Left Side: Chat Room -->
         <div class="role-card chat-section" style="flex: 2; height: 500px; display: flex; flex-direction: column; text-align: left; min-width: 0;">
@@ -80,50 +92,96 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
     const roomId = document.getElementById('room_id').value;
     const playerList = document.getElementById('player-list');
     const playerCount = document.getElementById('player-count');
+    const creatorControls = document.getElementById('creator-controls');
+    const startGameBtn = document.getElementById('start-game-btn');
+    const gameNotification = document.getElementById('game-status-notification');
+    const startError = document.getElementById('start-error');
 
-    function fetchMessages() {
-        fetch(`get_messages.php?room_id=${roomId}`)
+    let lastMessageId = 0;
+
+    function syncRoom() {
+        fetch(`sync_room.php?room_id=${roomId}&last_id=${lastMessageId}`)
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    const isScrolledToBottom = chatBox.scrollHeight - chatBox.clientHeight <= chatBox.scrollTop + 1;
-                    chatBox.innerHTML = '';
-                    if (data.messages.length === 0) {
-                        chatBox.innerHTML = '<p style="color: var(--white-dark); font-style: italic;">No messages yet.</p>';
-                    } else {
+                    // Update Room Status & Creator Controls
+                    if (data.room) {
+                        playerCount.innerText = `${data.room.current_players} / ${data.room.max_players}`;
+                        
+                        if (data.room.status === 'in_progress') {
+                            gameNotification.style.display = 'block';
+                            creatorControls.style.display = 'none';
+                        } else if (data.room.creator_id === data.room.current_user_id) {
+                            creatorControls.style.display = 'block';
+                            if (data.room.current_players < 2) {
+                                startGameBtn.disabled = true;
+                                startGameBtn.style.opacity = '0.5';
+                            } else {
+                                startGameBtn.disabled = false;
+                                startGameBtn.style.opacity = '1';
+                            }
+                        }
+                    }
+
+                    // Update Player List
+                    if (data.players) {
+                        playerList.innerHTML = '';
+                        data.players.forEach(username => {
+                            const p = document.createElement('div');
+                            p.style.padding = '10px';
+                            p.style.background = 'rgba(255,255,255,0.05)';
+                            p.style.borderRadius = '5px';
+                            p.style.color = 'var(--white)';
+                            p.innerText = username;
+                            playerList.appendChild(p);
+                        });
+                    }
+
+                    // Append New Messages
+                    if (data.messages && data.messages.length > 0) {
+                        // Remove "Loading..." or "No messages yet" if they exist
+                        if (lastMessageId === 0) chatBox.innerHTML = '';
+
+                        const isScrolledToBottom = chatBox.scrollHeight - chatBox.clientHeight <= chatBox.scrollTop + 1;
+                        
                         data.messages.forEach(msg => {
                             const msgDiv = document.createElement('div');
                             msgDiv.style.marginBottom = '0.5rem';
-                            msgDiv.innerHTML = `<strong style="color: var(--red);">${msg.username}:</strong> <span style="color: var(--white);">${msg.message}</span>`;
+                            msgDiv.innerHTML = `<span style="color: var(--white-dark); font-size: 0.8rem;">[${msg.time}]</span> <strong style="color: var(--red);">${msg.username}:</strong> <span style="color: var(--white);">${msg.message}</span>`;
                             chatBox.appendChild(msgDiv);
+                            lastMessageId = msg.id;
                         });
-                    }
-                    if (isScrolledToBottom) {
-                        chatBox.scrollTop = chatBox.scrollHeight;
+
+                        if (isScrolledToBottom) {
+                            chatBox.scrollTop = chatBox.scrollHeight;
+                        }
+                    } else if (lastMessageId === 0) {
+                        chatBox.innerHTML = '<p style="color: var(--white-dark); font-style: italic;">No messages yet.</p>';
                     }
                 }
-            });
+            })
+            .catch(err => console.error('Sync error:', err));
     }
 
-    function fetchRoomStatus() {
-        fetch(`get_room_status.php?room_id=${roomId}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    playerCount.innerText = `${data.current_players} / ${data.max_players}`;
-                    playerList.innerHTML = '';
-                    data.players.forEach(username => {
-                        const p = document.createElement('div');
-                        p.style.padding = '10px';
-                        p.style.background = 'rgba(255,255,255,0.05)';
-                        p.style.borderRadius = '5px';
-                        p.style.color = 'var(--white)';
-                        p.innerText = username;
-                        playerList.appendChild(p);
-                    });
-                }
-            });
-    }
+    startGameBtn.addEventListener('click', function() {
+        const formData = new FormData();
+        formData.append('room_id', roomId);
+
+        fetch('start_game.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                startError.style.display = 'none';
+                syncRoom();
+            } else {
+                startError.innerText = data.message;
+                startError.style.display = 'block';
+            }
+        });
+    });
 
     chatForm.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -141,16 +199,15 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
             .then(data => {
                 if (data.status === 'success') {
                     messageInput.value = '';
-                    fetchMessages();
+                    syncRoom();
                 }
             });
         }
     });
 
-    setInterval(fetchMessages, 2000);
-    setInterval(fetchRoomStatus, 3000);
-    fetchMessages();
-    fetchRoomStatus();
+    // Sync every 2 seconds
+    setInterval(syncRoom, 2000);
+    syncRoom();
 </script>
 
 <?php require_once "includes/footer.php"; ?>
