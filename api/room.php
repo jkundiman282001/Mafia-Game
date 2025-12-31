@@ -33,7 +33,8 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
 }
 ?>
 
-<div class="container" style="padding-top: 100px; padding-bottom: 50px;">
+<!-- Lobby Container -->
+<div id="lobby-container" class="container" style="padding-top: 100px; padding-bottom: 50px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
         <div>
             <h2 class="section-title" style="margin-bottom: 0.5rem;"><?php echo htmlspecialchars($room_name); ?></h2>
@@ -53,38 +54,6 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
         <p style="color: var(--white-dark); margin-bottom: 1rem;">You are the room creator. When enough players have joined, you can start the game.</p>
         <button id="start-game-btn" class="cta-button" style="min-width: 200px;">Start Game</button>
         <p id="start-error" style="color: var(--red); margin-top: 10px; font-size: 0.9rem; display: none;"></p>
-    </div>
-
-    <!-- Game Started Notification -->
-    <div id="game-status-notification" style="display: none; margin-bottom: 2rem; text-align: center; padding: 1.5rem; background: var(--red); color: white; border-radius: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">
-        <span id="phase-text" style="font-size: 1.5rem; display: block; margin-bottom: 0.5rem;">The Game has Started!</span>
-        <div style="display: flex; justify-content: center; gap: 20px; align-items: center; flex-wrap: wrap;">
-            <div id="role-reveal" style="font-size: 1rem; color: #ffeb3b; padding: 0.5rem 1rem; background: rgba(0,0,0,0.2); border-radius: 5px;">
-                Your Role: <span id="user-role-text">...</span>
-            </div>
-            <div id="timer-display" style="font-size: 1rem; color: white; padding: 0.5rem 1rem; background: rgba(0,0,0,0.2); border-radius: 5px; display: none;">
-                Time: <span id="time-left">03:00</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Game Actions Panel -->
-    <div id="action-panel" style="display: none; margin-bottom: 2rem; text-align: center; padding: 1.5rem; background: rgba(255, 255, 255, 0.05); border-radius: 10px; border: 1px solid var(--red);">
-        <h3 id="action-title" style="margin-bottom: 1rem; color: var(--red);">It's your turn!</h3>
-        <p id="action-desc" style="color: var(--white-dark); margin-bottom: 1.5rem;">Choose a target from the player list.</p>
-        <div id="investigation-result" style="display: none; margin-bottom: 1rem; padding: 10px; background: rgba(0,0,0,0.3); color: #ffeb3b; border-radius: 5px;"></div>
-    </div>
-
-    <!-- Creator Trial Button -->
-    <div id="trial-control" style="display: none; margin-bottom: 2rem; text-align: center; padding: 1rem; background: rgba(255, 255, 255, 0.05); border-radius: 10px; border: 1px dashed var(--red);">
-        <button id="trial-btn" class="cta-button" style="background: var(--red); color: white;">Proceed to Trial</button>
-    </div>
-
-    <!-- Game End Notification -->
-    <div id="game-end-notification" style="display: none; margin-bottom: 2rem; text-align: center; padding: 2rem; background: gold; color: black; border-radius: 10px; font-weight: bold;">
-        <h2 style="margin-bottom: 1rem; font-size: 2.5rem;">GAME OVER!</h2>
-        <h3 id="winner-text" style="font-size: 1.5rem;">The Townspeople Win!</h3>
-        <a href="game_room.php" class="cta-button" style="margin-top: 1.5rem; display: inline-block; background: black; color: white;">Return to Lobby</a>
     </div>
 
     <div class="room-container" style="display: flex; gap: 2rem; align-items: flex-start;">
@@ -112,6 +81,75 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
     </div>
 </div>
 
+<!-- Arena Container -->
+<div id="arena-container" class="container" style="display: none; padding-top: 80px; max-width: 1400px; padding-bottom: 50px;">
+    <div class="arena-layout" style="display: flex; gap: 20px; height: 80vh;">
+        <!-- Left Column: Players -->
+        <div class="arena-column players-col" style="flex: 1; background: var(--black-light); border: 1px solid var(--red); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; min-width: 250px;">
+            <h3 style="color: var(--red); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 15px;">PLAYERS</h3>
+            <div id="arena-player-list" style="flex: 1; overflow-y: auto;">
+                <!-- Arena players here -->
+            </div>
+        </div>
+
+        <!-- Middle Column: Game Status/Actions -->
+        <div class="arena-column main-col" style="flex: 2; background: var(--black-light); border: 1px solid var(--red); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; text-align: center; min-width: 400px;">
+            <div id="phase-banner" style="background: var(--red); padding: 10px; border-radius: 5px; margin-bottom: 20px;">
+                <h2 id="phase-name" style="margin: 0; letter-spacing: 2px;">DAY 1</h2>
+            </div>
+            
+            <div id="arena-timer" style="font-size: 3rem; font-weight: bold; margin: 20px 0; font-family: monospace; color: var(--white);">03:00</div>
+            
+            <div id="arena-role-card" style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <p style="color: var(--white-dark); margin-bottom: 5px;">YOUR ROLE</p>
+                <h3 id="user-role-display" style="color: #ffeb3b; margin: 0; font-size: 1.5rem;">...</h3>
+            </div>
+
+            <div id="arena-action-panel" style="display: none; background: rgba(255,0,0,0.1); border: 1px dashed var(--red); padding: 20px; border-radius: 10px;">
+                <h3 id="arena-action-title" style="color: var(--red); margin-bottom: 10px;">YOUR TURN</h3>
+                <p id="arena-action-desc" style="color: var(--white-dark);">Select a target from the player list.</p>
+                <div id="arena-investigation-result" style="display: none; margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.3); color: #ffeb3b; border-radius: 5px;"></div>
+            </div>
+
+            <div id="arena-trial-control" style="display: none; margin-top: auto; padding-top: 20px;">
+                <button id="arena-trial-btn" class="cta-button" style="width: 100%;">PROCEED TO TRIAL</button>
+            </div>
+        </div>
+
+        <!-- Right Column: Chat -->
+        <div class="arena-column chat-col" style="flex: 1.5; background: var(--black-light); border: 1px solid var(--red); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; min-width: 350px;">
+            <h3 style="color: var(--red); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 15px;">CHAT</h3>
+            <div id="arena-chat-box" style="flex: 1; overflow-y: auto; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+                <!-- Arena chat messages here -->
+            </div>
+            <form id="arena-chat-form" style="display: flex; gap: 5px;">
+                <input type="text" id="arena-message-input" class="form-control" placeholder="Talk..." style="margin: 0;" autocomplete="off">
+                <button type="submit" class="cta-button" style="padding: 0 15px;">SEND</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Original elements preserved for compatibility or hidden use -->
+<div id="game-status-notification" style="display: none;"></div>
+<div id="phase-text" style="display: none;"></div>
+<div id="user-role-text" style="display: none;"></div>
+<div id="timer-display" style="display: none;"></div>
+<div id="time-left" style="display: none;"></div>
+<div id="action-panel" style="display: none;"></div>
+<div id="action-title" style="display: none;"></div>
+<div id="action-desc" style="display: none;"></div>
+<div id="investigation-result" style="display: none;"></div>
+<div id="trial-control" style="display: none;"></div>
+<div id="trial-btn" style="display: none;"></div>
+
+<!-- Game End Notification -->
+<div id="game-end-notification" style="display: none; margin-bottom: 2rem; text-align: center; padding: 2rem; background: gold; color: black; border-radius: 10px; font-weight: bold; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; width: 80%; max-width: 600px; border: 5px solid black;">
+    <h2 style="margin-bottom: 1rem; font-size: 2.5rem;">GAME OVER!</h2>
+    <h3 id="winner-text" style="font-size: 1.5rem;">The Townspeople Win!</h3>
+    <a href="game_room.php" class="cta-button" style="margin-top: 1.5rem; display: inline-block; background: black; color: white;">Return to Lobby</a>
+</div>
+
 <script>
     const chatBox = document.getElementById('chat-box');
     const chatForm = document.getElementById('chat-form');
@@ -136,6 +174,23 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
     const trialBtn = document.getElementById('trial-btn');
     const gameEndNotification = document.getElementById('game-end-notification');
     const winnerText = document.getElementById('winner-text');
+    
+    // Arena Elements
+    const lobbyContainer = document.getElementById('lobby-container');
+    const arenaContainer = document.getElementById('arena-container');
+    const arenaPlayerList = document.getElementById('arena-player-list');
+    const phaseName = document.getElementById('phase-name');
+    const arenaTimer = document.getElementById('arena-timer');
+    const userRoleDisplay = document.getElementById('user-role-display');
+    const arenaActionPanel = document.getElementById('arena-action-panel');
+    const arenaActionTitle = document.getElementById('arena-action-title');
+    const arenaActionDesc = document.getElementById('arena-action-desc');
+    const arenaTrialControl = document.getElementById('arena-trial-control');
+    const arenaTrialBtn = document.getElementById('arena-trial-btn');
+    const arenaChatBox = document.getElementById('arena-chat-box');
+    const arenaChatForm = document.getElementById('arena-chat-form');
+    const arenaMessageInput = document.getElementById('arena-message-input');
+    const arenaInvestigationResult = document.getElementById('arena-investigation-result');
 
     let lastMessageId = 0;
     let isAlive = true;
@@ -174,6 +229,7 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                             gameNotification.style.display = 'none';
                             actionPanel.style.display = 'none';
                             trialControl.style.display = 'none';
+                            arenaContainer.style.display = 'none';
                             winnerText.innerText = data.room.winner + " Win!";
                             return;
                         }
@@ -189,13 +245,14 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
 
                         if (data.room.status === 'in_progress') {
                             // Hide lobby elements
+                            lobbyContainer.style.display = 'none';
                             gameNotification.style.display = 'none'; 
                             creatorControls.style.display = 'none';
                             actionPanel.style.display = 'none';
                             trialControl.style.display = 'none';
                             
-                            // Show Arena Sidebar
-                            arenaSidebar.style.display = 'flex';
+                            // Show Arena
+                            arenaContainer.style.display = 'block';
                             if (data.user_role) {
                                 userRoleDisplay.innerText = data.user_role + (isAlive ? "" : " (DEAD)");
                                 userRoleDisplay.style.color = isAlive ? '#ffeb3b' : '#666';
@@ -254,6 +311,7 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                     // Update Player List with Action Buttons
                     if (data.players) {
                         playerList.innerHTML = '';
+                        arenaPlayerList.innerHTML = '';
                         const currentUserId = data.room ? data.room.current_user_id : null;
                         data.players.forEach(p => {
                             const pDiv = document.createElement('div');
@@ -294,37 +352,53 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                                 }
                             }
 
-                            pDiv.innerHTML = `
+                            const pContent = `
                                 <div>
                                     <span style="color: ${p.is_alive ? 'white' : '#666'}">${p.username}</span>
                                     ${!p.is_alive ? '<span style="color: var(--red); font-size: 0.7rem; margin-left: 5px;">DEAD</span>' : ''}
                                 </div>
                                 ${actionBtn}
                             `;
+                            
+                            pDiv.innerHTML = pContent;
                             playerList.appendChild(pDiv);
+                            
+                            // Clone for arena
+                            const pDivArena = pDiv.cloneNode(true);
+                            arenaPlayerList.appendChild(pDivArena);
                         });
                     }
 
                     // Append New Messages
                     if (data.messages && data.messages.length > 0) {
                         // Remove "Loading..." or "No messages yet" if they exist
-                        if (lastMessageId === 0) chatBox.innerHTML = '';
+                        if (lastMessageId === 0) {
+                            chatBox.innerHTML = '';
+                            arenaChatBox.innerHTML = '';
+                        }
 
                         const isScrolledToBottom = chatBox.scrollHeight - chatBox.clientHeight <= chatBox.scrollTop + 1;
+                        const isArenaScrolledToBottom = arenaChatBox.scrollHeight - arenaChatBox.clientHeight <= arenaChatBox.scrollTop + 1;
                         
                         data.messages.forEach(msg => {
                             const msgDiv = document.createElement('div');
                             msgDiv.style.marginBottom = '0.5rem';
                             msgDiv.innerHTML = `<span style="color: var(--white-dark); font-size: 0.8rem;">[${msg.time}]</span> <strong style="color: var(--red);">${msg.username}:</strong> <span style="color: var(--white);">${msg.message}</span>`;
+                            
                             chatBox.appendChild(msgDiv);
+                            
+                            // Clone for arena
+                            const msgDivArena = msgDiv.cloneNode(true);
+                            arenaChatBox.appendChild(msgDivArena);
+                            
                             lastMessageId = msg.id;
                         });
 
-                        if (isScrolledToBottom) {
-                            chatBox.scrollTop = chatBox.scrollHeight;
-                        }
+                        if (isScrolledToBottom) chatBox.scrollTop = chatBox.scrollHeight;
+                        if (isArenaScrolledToBottom) arenaChatBox.scrollTop = arenaChatBox.scrollHeight;
                     } else if (lastMessageId === 0) {
                         chatBox.innerHTML = '<p style="color: var(--white-dark); font-style: italic;">No messages yet.</p>';
+                        arenaChatBox.innerHTML = '<p style="color: var(--white-dark); font-style: italic;">No messages yet.</p>';
                     }
                 }
             })
@@ -354,6 +428,16 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
     chatForm.addEventListener('submit', function(e) {
         e.preventDefault();
         const message = messageInput.value.trim();
+        sendMessage(message);
+    });
+
+    arenaChatForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const message = arenaMessageInput.value.trim();
+        sendMessage(message);
+    });
+
+    function sendMessage(message) {
         if (message) {
             const formData = new FormData();
             formData.append('room_id', roomId);
@@ -367,11 +451,12 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
             .then(data => {
                 if (data.status === 'success') {
                     messageInput.value = '';
+                    arenaMessageInput.value = '';
                     syncRoom();
                 }
             });
         }
-    });
+    }
 
     function performAction(action, targetId) {
         const formData = new FormData();
@@ -394,7 +479,11 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                 if (data.investigation_result) {
                     investigationResult.style.display = 'block';
                     investigationResult.innerText = `Investigation Result: This player is ${data.investigation_result}`;
-                    // Also show in arena if needed
+                    
+                    arenaInvestigationResult.style.display = 'block';
+                    arenaInvestigationResult.innerText = `Investigation Result: ${data.investigation_result}`;
+                    
+                    // Also show in arena desc for visibility
                     arenaActionDesc.innerText = `Investigation Result: ${data.investigation_result}`;
                 }
                 actionPanel.style.display = 'none';
