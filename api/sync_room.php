@@ -23,7 +23,9 @@ if(isset($_GET["room_id"])){
     // 1. Fetch Room Status
     $sql_room = "SELECT status, phase, round, current_turn, killer_target, doctor_target, winner, phase_start_time, NOW() as current_time, current_players, max_players, creator_id FROM rooms WHERE id = $room_id";
     $res_room = mysqli_query($link, $sql_room);
-    if($res_room && $row = mysqli_fetch_assoc($res_room)){
+    
+    if($res_room && mysqli_num_rows($res_room) > 0){
+        $row = mysqli_fetch_assoc($res_room);
         $time_remaining = 0;
         if($row['phase'] === 'day' && $row['phase_start_time']){
             $start = strtotime($row['phase_start_time']);
@@ -46,6 +48,8 @@ if(isset($_GET["room_id"])){
             "creator_id" => (int)$row["creator_id"],
             "current_user_id" => (int)$_SESSION["id"]
         ];
+    } else {
+        // Log error if needed: mysqli_error($link)
     }
 
     // 2. Fetch Players & Current User Role
@@ -55,17 +59,19 @@ if(isset($_GET["room_id"])){
                     JOIN users u ON rp.user_id = u.id 
                     WHERE rp.room_id = $room_id";
     $res_players = mysqli_query($link, $sql_players);
-    while($player = mysqli_fetch_assoc($res_players)){
-        $response["players"][] = [
-            "id" => (int)$player['user_id'],
-            "username" => $player['username'],
-            "is_alive" => (bool)$player['is_alive'],
-            "vote_count" => (int)$player['vote_count']
-        ];
-        
-        if((int)$player['user_id'] === $user_id){
-            $response["user_role"] = $player['role'];
-            $response["is_alive"] = (bool)$player['is_alive'];
+    if ($res_players) {
+        while($player = mysqli_fetch_assoc($res_players)){
+            $response["players"][] = [
+                "id" => (int)$player['user_id'],
+                "username" => $player['username'],
+                "is_alive" => (bool)$player['is_alive'],
+                "vote_count" => (int)$player['vote_count']
+            ];
+            
+            if((int)$player['user_id'] === $user_id){
+                $response["user_role"] = $player['role'];
+                $response["is_alive"] = (bool)$player['is_alive'];
+            }
         }
     }
 
