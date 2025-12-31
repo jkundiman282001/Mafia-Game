@@ -31,7 +31,7 @@ if(isset($_GET["room_id"])){
     ];
 
     // 1. Fetch Room Status
-    $sql_room = "SELECT status, phase, round, current_turn, killer_target, doctor_target, winner, phase_start_time, NOW() as server_time, current_players, max_players, creator_id FROM rooms WHERE id = $room_id";
+    $sql_room = "SELECT status, phase, round, current_turn, killer_target, doctor_target, winner, phase_start_time, NOW() as server_time, current_players, max_players, creator_id, investigation_result, investigation_target_id FROM rooms WHERE id = $room_id";
     $res_room = mysqli_query($link, $sql_room);
     
     if($res_room && mysqli_num_rows($res_room) > 0){
@@ -56,7 +56,9 @@ if(isset($_GET["room_id"])){
             "current_players" => $row["current_players"],
             "max_players" => $row["max_players"],
             "creator_id" => (int)$row["creator_id"],
-            "current_user_id" => (int)$_SESSION["id"]
+            "current_user_id" => (int)$_SESSION["id"],
+            "investigation_result" => $row["investigation_result"],
+            "investigation_target_id" => $row["investigation_target_id"]
         ];
     } else {
         // Log error if needed: mysqli_error($link)

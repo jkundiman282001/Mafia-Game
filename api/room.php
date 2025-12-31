@@ -359,6 +359,13 @@ if(isset($_GET["id"]) && !empty(trim($_GET["id"]))){
                                     if (userRole === 'Killer') arenaActionDesc.innerText = "Eliminate someone.";
                                     if (userRole === 'Doctor') arenaActionDesc.innerText = "Protect someone.";
                                     if (userRole === 'Investigator') arenaActionDesc.innerText = "Investigate someone.";
+                                } else if (isAlive && userRole === 'Investigator' && currentTurn === 'Investigator_Result') {
+                                    // Handle Investigator seeing result
+                                    arenaActionPanel.style.display = 'block';
+                                    arenaActionTitle.innerText = "INVESTIGATION RESULT";
+                                    
+                                    let resultColor = data.room.investigation_result === 'Bad' ? 'var(--red)' : '#4caf50';
+                                    arenaActionDesc.innerHTML = `Result: <span style="color: ${resultColor}; font-weight: bold;">${data.room.investigation_result}</span><br><button onclick="performAction('end_night', 0)" class="action-btn action-btn-save" style="margin-top: 10px; width: 100%;">PROCEED TO DAY</button>`;
                                 } else {
                                     arenaActionPanel.style.display = 'none';
                                 }

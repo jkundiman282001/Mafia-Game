@@ -74,10 +74,16 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["room_id"]) && isset($_P
             $target = mysqli_fetch_assoc($res_target);
             $result = ($target['role'] === 'Killer') ? "Bad" : "Good";
             
+            // Store result and change turn to allow Investigator to see it
+            mysqli_query($link, "UPDATE rooms SET current_turn = 'Investigator_Result', investigation_result = '$result', investigation_target_id = $target_id WHERE id = $room_id");
+            
+            echo json_encode(["status" => "success", "message" => "Investigation complete.", "investigation_result" => $result]);
+            exit;
+        }
+        elseif($action === 'end_night' && $player['role'] === 'Investigator' && $room['current_turn'] === 'Investigator_Result'){
             // End Night Phase
             end_night_phase($link, $room_id);
-            
-            echo json_encode(["status" => "success", "message" => "Investigation complete: Target is $result.", "investigation_result" => $result]);
+            echo json_encode(["status" => "success", "message" => "Night ended."]);
             exit;
         }
     } 
@@ -156,7 +162,7 @@ function end_night_phase($link, $room_id) {
     // Check for game end before moving to day
     check_game_end($link, $room_id);
     
-    mysqli_query($link, "UPDATE rooms SET phase = 'day', current_turn = 'None', phase_start_time = NOW(), killer_target = NULL, doctor_target = NULL WHERE id = $room_id");
+    mysqli_query($link, "UPDATE rooms SET phase = 'day', current_turn = 'None', phase_start_time = NOW(), killer_target = NULL, doctor_target = NULL, investigation_result = NULL, investigation_target_id = NULL WHERE id = $room_id");
 }
 
 function check_game_end($link, $room_id) {
